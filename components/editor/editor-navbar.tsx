@@ -3,6 +3,7 @@
 import * as React from "react";
 import { PanelLeftClose, PanelLeftOpen } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { Show, SignInButton, SignUpButton, UserButton } from "@clerk/nextjs";
 
 interface EditorNavbarProps {
   isSidebarOpen?: boolean;
@@ -30,6 +31,9 @@ export function EditorNavbar({
             <PanelLeftOpen className="h-4 w-4" />
           )}
         </Button>
+        <span className="font-mono text-xs font-semibold text-text-primary">
+          Blueprint
+        </span>
       </div>
 
       {/* Center Section */}
@@ -38,8 +42,22 @@ export function EditorNavbar({
       </div>
 
       {/* Right Section */}
-      <div className="flex items-center gap-2">
-        {/* Actions / Avatars placeholder */}
+      <div className="flex items-center gap-4">
+        <Show when="signed-out">
+          <SignInButton mode="modal">
+            <Button variant="ghost" size="sm" className="text-xs text-text-secondary hover:text-text-primary">
+              Sign In
+            </Button>
+          </SignInButton>
+          <SignUpButton mode="modal">
+            <Button size="sm" className="text-xs bg-accent-primary text-white hover:bg-accent-hover">
+              Sign Up
+            </Button>
+          </SignUpButton>
+        </Show>
+        <Show when="signed-in">
+          <UserButton />
+        </Show>
       </div>
     </header>
   );

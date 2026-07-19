@@ -1,7 +1,13 @@
-export default function Home() {
-  return (
-    <main className="flex min-h-screen items-center justify-center bg-base">
-      <p className="text-sm font-medium text-text-primary">BlueprintAI</p>
-    </main>
-  );
+import { auth } from "@clerk/nextjs/server";
+import { redirect } from "next/navigation";
+
+export default async function HomePage() {
+  const { userId } = await auth();
+
+  if (userId) {
+    redirect("/editor");
+  } else {
+    redirect("/sign-in");
+  }
 }
+
