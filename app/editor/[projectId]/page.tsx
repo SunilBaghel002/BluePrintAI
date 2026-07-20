@@ -8,12 +8,21 @@ import {
 import { slugify } from "@/lib/utils";
 import { Project } from "@/types/project";
 
-export default async function EditorPage() {
+interface EditorWorkspacePageProps {
+  params: Promise<{
+    projectId: string;
+  }>;
+}
+
+export default async function EditorWorkspacePage({
+  params,
+}: EditorWorkspacePageProps) {
   const { userId } = await auth();
   if (!userId) {
     redirect("/sign-in");
   }
 
+  const { projectId } = await params;
   const user = await currentUser();
   const userEmail = user?.primaryEmailAddress?.emailAddress ?? "";
 
@@ -44,6 +53,7 @@ export default async function EditorPage() {
     <EditorHomeView
       ownedProjects={ownedProjects}
       sharedProjects={sharedProjects}
+      activeProjectId={projectId}
     />
   );
 }

@@ -4,3 +4,5 @@ export { CreateProjectDialog } from "./create-project-dialog";
 export { RenameProjectDialog } from "./rename-project-dialog";
 export { DeleteProjectDialog } from "./delete-project-dialog";
 export { useProjectDialogs } from "./use-project-dialogs";
+export { EditorHomeView } from "./editor-home-view";
+
