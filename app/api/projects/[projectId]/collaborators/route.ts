@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { auth, createClerkClient, User } from "@clerk/nextjs/server";
+import { auth, clerkClient, User } from "@clerk/nextjs/server";
 import { z } from "zod";
 import { checkProjectAccess } from "@/lib/project-access";
 import {
@@ -25,15 +25,37 @@ export async function GET(_request: Request, context: RouteContext) {
     }
 
     const { projectId } = await context.params;
-    const { hasAccess, isOwner } = await checkProjectAccess(projectId);
+    const { hasAccess, isOwner, project } = await checkProjectAccess(projectId);
 
-    if (!hasAccess) {
+    if (!hasAccess || !project) {
       return NextResponse.json({ error: "Forbidden" }, { status: 403 });
     }
 
     const dbCollaborators = await getProjectCollaborators(projectId);
 
-    const clerk = createClerkClient({ secretKey: process.env.CLERK_SECRET_KEY });
+    const clerk = await clerkClient();
+
+
+    let ownerUser: User | null = null;
+    try {
+      ownerUser = await clerk.users.getUser(project.ownerId);
+    } catch (err) {
+      console.error("Owner lookup error:", err);
+    }
+
+    const ownerEmail = ownerUser?.emailAddresses?.[0]?.emailAddress ?? "";
+    const ownerName = ownerUser
+      ? `${ownerUser.firstName ?? ""} ${ownerUser.lastName ?? ""}`.trim() || ownerUser.username
+      : null;
+    const ownerAvatar = ownerUser?.imageUrl ?? null;
+
+    const owner = {
+      id: project.ownerId,
+      email: ownerEmail,
+      name: ownerName,
+      avatarUrl: ownerAvatar,
+    };
+
     const emails = dbCollaborators.map((c) => c.email);
 
     let clerkUsers: User[] = [];
@@ -66,7 +88,7 @@ export async function GET(_request: Request, context: RouteContext) {
       };
     });
 
-    return NextResponse.json({ data: collaborators, isOwner });
+    return NextResponse.json({ data: { owner, collaborators }, isOwner });
   } catch (error) {
     console.error("Error fetching collaborators:", error);
     return NextResponse.json(
@@ -75,6 +97,7 @@ export async function GET(_request: Request, context: RouteContext) {
     );
   }
 }
+
 
 
 export async function POST(request: Request, context: RouteContext) {

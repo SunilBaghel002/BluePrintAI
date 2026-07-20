@@ -2,9 +2,8 @@
 
 import * as React from "react";
 import { useRouter } from "next/navigation";
-import { Sparkles, Send } from "lucide-react";
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
+import { Bot, Sparkles } from "lucide-react";
+import { CanvasRoom } from "@/components/canvas";
 import {
   EditorNavbar,
   ProjectSidebar,
@@ -30,10 +29,9 @@ export function EditorWorkspaceView({
   roomId,
 }: EditorWorkspaceViewProps) {
   const router = useRouter();
-  const [isSidebarOpen, setIsSidebarOpen] = React.useState(false);
-  const [isAiSidebarOpen, setIsAiSidebarOpen] = React.useState(false);
+  const [isSidebarOpen, setIsSidebarOpen] = React.useState(true);
+  const [isAiSidebarOpen, setIsAiSidebarOpen] = React.useState(true);
   const [isShareOpen, setIsShareOpen] = React.useState(false);
-  const [aiPrompt, setAiPrompt] = React.useState("");
 
   const {
     dialogType,
@@ -52,11 +50,10 @@ export function EditorWorkspaceView({
 
   const handleSelectProject = (p: Project) => {
     router.push(`/editor/${p.id}`);
-    setIsSidebarOpen(false);
   };
 
   return (
-    <div className="flex h-screen w-screen flex-col overflow-hidden bg-base text-text-primary">
+    <div className="flex h-screen w-screen flex-col overflow-hidden bg-[#0A0A0C] text-[#F0F0F0]">
       {/* Top Navbar */}
       <EditorNavbar
         isSidebarOpen={isSidebarOpen}
@@ -67,9 +64,14 @@ export function EditorWorkspaceView({
         isAiSidebarOpen={isAiSidebarOpen}
       />
 
-      {/* Main Workspace Row */}
-      <div className="relative flex flex-1 pt-12 overflow-hidden">
-        {/* Left Project Sidebar Drawer */}
+      {/* Main Workspace Area */}
+      <div className="relative flex flex-1 overflow-hidden">
+        {/* Full Viewport Canvas Area */}
+        <main className="absolute inset-0 z-0 bg-black overflow-hidden">
+          <CanvasRoom roomId={roomId} />
+        </main>
+
+        {/* Left Floating Project Sidebar */}
         <ProjectSidebar
           isOpen={isSidebarOpen}
           onClose={() => setIsSidebarOpen(false)}
@@ -82,67 +84,48 @@ export function EditorWorkspaceView({
           onSelectProject={handleSelectProject}
         />
 
-        {/* Central Canvas Area */}
-        <main className="relative flex flex-1 flex-col items-center justify-center bg-canvas p-6 overflow-hidden">
-          {/* Subtle Canvas Dot Grid Background */}
-          <div
-            className="absolute inset-0 opacity-20 pointer-events-none"
-            style={{
-              backgroundImage: `radial-gradient(var(--canvas-dot) 1px, transparent 1px)`,
-              backgroundSize: "24px 24px",
-            }}
-          />
-
-          <div className="relative z-10 flex max-w-md flex-col items-center text-center rounded-xl border border-border bg-surface/80 p-8 shadow-2xl backdrop-blur-sm">
-            <div className="flex h-12 w-12 items-center justify-center rounded-full bg-accent-dim text-accent-primary">
-              <span className="font-mono text-sm font-bold">FLOW</span>
-            </div>
-            <h2 className="mt-4 text-lg font-semibold text-text-primary">
-              {project.name}
-            </h2>
-            <p className="mt-1 font-mono text-xs text-text-muted">
-              Room ID: {roomId}
-            </p>
-            <p className="mt-3 text-xs text-text-secondary">
-              Interactive React Flow & Liveblocks canvas will render here in Phase 2.
-            </p>
-          </div>
-        </main>
-
-        {/* Right AI Sidebar Placeholder */}
+        {/* Right Floating AI Copilot Sidebar */}
         {isAiSidebarOpen && (
-          <aside className="z-30 flex w-72 flex-col border-l border-border bg-sidebar p-4 text-text-primary shadow-xl">
-            <div className="flex items-center gap-2 border-b border-border pb-3">
-              <Sparkles className="h-4 w-4 text-ai-primary stroke-[1.5]" />
-              <h3 className="text-xs font-semibold uppercase tracking-wider text-text-primary">
-                AI Assistant
-              </h3>
+          <aside className="absolute right-3 top-3 bottom-3 z-30 w-[320px] rounded-2xl border border-[#1E1E24] bg-[#0E0E10]/95 backdrop-blur-md p-4 flex flex-col justify-between select-none shadow-2xl transition-all">
+            <div>
+              {/* Header Title */}
+              <div className="flex items-center justify-between">
+                <div>
+                  <h3 className="text-xs font-semibold text-[#F0F0F0]">
+                    AI Copilot
+                  </h3>
+                  <span className="text-[10px] text-[#666670] block mt-0.5">
+                    Placeholder panel
+                  </span>
+                </div>
+                <Sparkles className="h-4 w-4 text-[#A855F7] stroke-[1.5]" />
+              </div>
+
+              {/* Chat Surface Pending Card */}
+              <div className="rounded-2xl border border-[#1E1E24] bg-[#121215] p-4 flex gap-3.5 mt-4">
+                <div className="h-8 w-8 rounded-xl bg-[#2E1065] text-[#A855F7] flex items-center justify-center shrink-0">
+                  <Bot className="h-4 w-4 stroke-[1.5]" />
+                </div>
+                <div className="flex flex-col">
+                  <span className="text-xs font-semibold text-[#F0F0F0]">
+                    Chat surface pending
+                  </span>
+                  <span className="text-[11px] text-[#888892] mt-1 leading-relaxed">
+                    The toggle is wired. Messaging and generation are intentionally out of scope here.
+                  </span>
+                </div>
+              </div>
             </div>
 
-            <div className="flex-1 overflow-y-auto py-4 text-xs text-text-secondary">
-              <p className="leading-relaxed">
-                Describe your SaaS system architecture in plain English. AI will generate nodes and edges directly on your canvas.
+            {/* Future Hooks Card */}
+            <div className="rounded-2xl border border-[#1E1E24] bg-[#121215] p-4 mt-auto">
+              <span className="text-[10px] font-bold text-[#666670] tracking-[0.2em] uppercase block">
+                FUTURE HOOKS
+              </span>
+              <p className="text-xs text-[#888892] mt-2 leading-relaxed">
+                Prompt composer, run status, and architecture guidance will attach to this sidebar.
               </p>
             </div>
-
-            <form
-              onSubmit={(e) => e.preventDefault()}
-              className="flex items-center gap-2 pt-3 border-t border-border"
-            >
-              <Input
-                placeholder="Ask AI to design..."
-                value={aiPrompt}
-                onChange={(e) => setAiPrompt(e.target.value)}
-                className="h-8 border-border bg-base text-xs text-text-primary focus:border-ai-primary"
-              />
-              <Button
-                type="submit"
-                size="icon-sm"
-                className="h-8 w-8 shrink-0 bg-ai-primary text-white hover:bg-ai-primary/90"
-              >
-                <Send className="h-3.5 w-3.5 stroke-[1.5]" />
-              </Button>
-            </form>
           </aside>
         )}
       </div>
@@ -184,4 +167,3 @@ export function EditorWorkspaceView({
     </div>
   );
 }
-
