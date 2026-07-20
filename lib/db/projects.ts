@@ -62,3 +62,40 @@ export async function getProjectsSharedWithUser(email: string) {
   return collaborators.map((c) => c.project);
 }
 
+export async function getProjectCollaborators(projectId: string) {
+  return prisma.projectCollaborator.findMany({
+    where: { projectId },
+    orderBy: { createdAt: "asc" },
+  });
+}
+
+export async function addProjectCollaborator(projectId: string, email: string) {
+  const cleanEmail = email.toLowerCase().trim();
+  return prisma.projectCollaborator.create({
+    data: {
+      projectId,
+      email: cleanEmail,
+    },
+  });
+}
+
+export async function removeProjectCollaborator(
+  projectId: string,
+  collaboratorId: string
+) {
+  const result = await prisma.projectCollaborator.deleteMany({
+    where: {
+      id: collaboratorId,
+      projectId,
+    },
+  });
+
+  if (result.count === 0) {
+    throw new Error("Collaborator not found");
+  }
+
+  return result;
+}
+
+
+
