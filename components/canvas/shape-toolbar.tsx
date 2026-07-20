@@ -3,6 +3,18 @@
 import * as React from "react";
 import { SHAPE_CONFIGS, ShapeType } from "@/types/canvas";
 
+export let activeDraggedShapeConfig: {
+  shape: ShapeType;
+  width: number;
+  height: number;
+} | null = null;
+
+export function setActiveDraggedShape(
+  config: { shape: ShapeType; width: number; height: number } | null
+) {
+  activeDraggedShapeConfig = config;
+}
+
 function ShapeIcon({ shape }: { shape: ShapeType }) {
   switch (shape) {
     case "rectangle":
@@ -86,6 +98,12 @@ export function ShapeToolbar() {
     shapeType: ShapeType
   ) => {
     const config = SHAPE_CONFIGS[shapeType];
+    setActiveDraggedShape({
+      shape: config.type,
+      width: config.width,
+      height: config.height,
+    });
+
     const payload = JSON.stringify({
       shape: config.type,
       width: config.width,
@@ -94,6 +112,10 @@ export function ShapeToolbar() {
 
     event.dataTransfer.setData("application/reactflow", payload);
     event.dataTransfer.effectAllowed = "move";
+  };
+
+  const handleDragEnd = () => {
+    setActiveDraggedShape(null);
   };
 
   const shapes: ShapeType[] = [
@@ -118,6 +140,7 @@ export function ShapeToolbar() {
             key={shape}
             draggable
             onDragStart={(e) => handleDragStart(e, shape)}
+            onDragEnd={handleDragEnd}
             title={`Drag ${config.label} onto canvas`}
             className="group relative flex h-8 w-8 cursor-grab items-center justify-center rounded-full text-[#888892] transition-colors hover:bg-[#1E1E24] hover:text-[#F0F0F0] active:cursor-grabbing"
           >

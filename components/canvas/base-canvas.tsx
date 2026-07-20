@@ -9,12 +9,13 @@ import {
   MiniMap,
   ConnectionMode,
   useReactFlow,
+  useViewport,
   type NodeTypes,
 } from "@xyflow/react";
 import { useLiveblocksFlow, Cursors } from "@liveblocks/react-flow";
-import { CANVAS_NODE_TYPE, CanvasNode } from "@/types/canvas";
-import { CanvasNodeRenderer } from "./canvas-node";
-import { ShapeToolbar } from "./shape-toolbar";
+import { CANVAS_NODE_TYPE, CanvasNode, ShapeType } from "@/types/canvas";
+import { CanvasNodeRenderer, NodeShape } from "./canvas-node";
+import { ShapeToolbar, activeDraggedShapeConfig, setActiveDraggedShape } from "./shape-toolbar";
 
 import "@xyflow/react/dist/style.css";
 import "@liveblocks/react-ui/styles.css";
@@ -30,8 +31,41 @@ function generateNodeId(shape: string): string {
   return `${shape}_${Date.now()}_${idCounter++}`;
 }
 
+interface DragPreviewState {
+  shape: ShapeType;
+  width: number;
+  height: number;
+  x: number;
+  y: number;
+}
+
+function DragPreviewGhost({ preview }: { preview: DragPreviewState }) {
+  const { x: vpX, y: vpY, zoom: vpZoom } = useViewport();
+
+  const left = preview.x * vpZoom + vpX;
+  const top = preview.y * vpZoom + vpY;
+  const width = preview.width * vpZoom;
+  const height = preview.height * vpZoom;
+
+  return (
+    <div
+      className="pointer-events-none absolute z-50 opacity-60"
+      style={{
+        left: `${left}px`,
+        top: `${top}px`,
+        width: `${width}px`,
+        height: `${height}px`,
+      }}
+    >
+      <NodeShape shape={preview.shape} label="" selected={true} />
+    </div>
+  );
+}
+
 function BaseCanvasContent() {
   const { screenToFlowPosition } = useReactFlow();
+  const [dragPreview, setDragPreview] = React.useState<DragPreviewState | null>(null);
+
   const { nodes, edges, onNodesChange, onEdgesChange, onConnect, onDelete } =
     useLiveblocksFlow<CanvasNode>({
       suspense: true,
@@ -47,13 +81,34 @@ function BaseCanvasContent() {
     (event: React.DragEvent<HTMLDivElement>) => {
       event.preventDefault();
       event.dataTransfer.dropEffect = "move";
+
+      if (activeDraggedShapeConfig) {
+        const position = screenToFlowPosition({
+          x: event.clientX,
+          y: event.clientY,
+        });
+
+        setDragPreview({
+          shape: activeDraggedShapeConfig.shape,
+          width: activeDraggedShapeConfig.width,
+          height: activeDraggedShapeConfig.height,
+          x: position.x - activeDraggedShapeConfig.width / 2,
+          y: position.y - activeDraggedShapeConfig.height / 2,
+        });
+      }
     },
-    []
+    [screenToFlowPosition]
   );
+
+  const handleDragLeave = React.useCallback(() => {
+    setDragPreview(null);
+  }, []);
 
   const handleDrop = React.useCallback(
     (event: React.DragEvent<HTMLDivElement>) => {
       event.preventDefault();
+      setDragPreview(null);
+      setActiveDraggedShape(null);
 
       const rawPayload = event.dataTransfer.getData("application/reactflow");
       if (!rawPayload) return;
@@ -95,8 +150,9 @@ function BaseCanvasContent() {
 
   return (
     <div
-      className="relative h-full w-full bg-black"
+      className="relative h-full w-full bg-black overflow-hidden"
       onDragOver={handleDragOver}
+      onDragLeave={handleDragLeave}
       onDrop={handleDrop}
     >
       <ReactFlow
@@ -108,6 +164,10 @@ function BaseCanvasContent() {
         onConnect={onConnect}
         onDelete={onDelete}
         connectionMode={ConnectionMode.Loose}
+        defaultEdgeOptions={{
+          style: { stroke: "#14B8A6", strokeWidth: 2 },
+          animated: true,
+        }}
         fitView
         colorMode="dark"
         className="!bg-black"
@@ -126,6 +186,9 @@ function BaseCanvasContent() {
         />
         <Cursors />
       </ReactFlow>
+
+      {dragPreview && <DragPreviewGhost preview={dragPreview} />}
+
       <ShapeToolbar />
     </div>
   );
