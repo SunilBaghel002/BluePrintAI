@@ -67,7 +67,7 @@ export function EditorWorkspaceView({
       {/* Main Workspace Area */}
       <div className="relative flex flex-1 overflow-hidden">
         {/* Full Viewport Canvas Area */}
-        <main className="absolute inset-0 z-0 bg-[#0A0A0C] overflow-hidden">
+        <main className="absolute inset-0 z-0 bg-black overflow-hidden">
           <CanvasRoom roomId={roomId} />
         </main>
 

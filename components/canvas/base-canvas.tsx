@@ -95,7 +95,7 @@ function BaseCanvasContent() {
 
   return (
     <div
-      className="relative h-full w-full bg-[#0A0A0C]"
+      className="relative h-full w-full bg-black"
       onDragOver={handleDragOver}
       onDrop={handleDrop}
     >
@@ -110,16 +110,18 @@ function BaseCanvasContent() {
         connectionMode={ConnectionMode.Loose}
         fitView
         colorMode="dark"
+        className="!bg-black"
+        style={{ backgroundColor: "#000000" }}
       >
         <Background
           variant={BackgroundVariant.Dots}
           gap={24}
           size={1.5}
-          color="#27272A"
+          color="#33333A"
         />
         <MiniMap
           nodeStrokeWidth={3}
-          maskColor="rgba(10, 10, 12, 0.75)"
+          maskColor="rgba(0, 0, 0, 0.75)"
           className="!bg-[#0E0E10] !border !border-[#1E1E24] !rounded-xl overflow-hidden"
         />
         <Cursors />
