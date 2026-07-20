@@ -164,6 +164,8 @@ function BaseCanvasContent() {
         onConnect={onConnect}
         onDelete={onDelete}
         connectionMode={ConnectionMode.Loose}
+        snapToGrid={true}
+        snapGrid={[12, 12]}
         defaultEdgeOptions={{
           style: { stroke: "#14B8A6", strokeWidth: 2 },
           animated: true,
