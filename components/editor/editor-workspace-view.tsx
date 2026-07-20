@@ -2,7 +2,8 @@
 
 import * as React from "react";
 import { useRouter } from "next/navigation";
-import { Bot, Compass, Sparkles } from "lucide-react";
+import { Bot, Sparkles } from "lucide-react";
+import { CanvasRoom } from "@/components/canvas";
 import {
   EditorNavbar,
   ProjectSidebar,
@@ -65,7 +66,12 @@ export function EditorWorkspaceView({
 
       {/* Main Workspace Area */}
       <div className="relative flex flex-1 overflow-hidden">
-        {/* Left In-Flow Project Sidebar */}
+        {/* Full Viewport Canvas Area */}
+        <main className="absolute inset-0 z-0 bg-[#0A0A0C] overflow-hidden">
+          <CanvasRoom roomId={roomId} />
+        </main>
+
+        {/* Left Floating Project Sidebar */}
         <ProjectSidebar
           isOpen={isSidebarOpen}
           onClose={() => setIsSidebarOpen(false)}
@@ -78,46 +84,9 @@ export function EditorWorkspaceView({
           onSelectProject={handleSelectProject}
         />
 
-        {/* Central Canvas Area */}
-        <main className="relative flex-1 bg-[#0A0A0C] rounded-2xl border border-[#1E1E24] m-2 flex flex-col items-center justify-center p-6 overflow-hidden">
-          {/* Subtle Canvas Dot Grid Background */}
-          <div
-            className="absolute inset-0 opacity-20 pointer-events-none"
-            style={{
-              backgroundImage: `radial-gradient(#27272A 1px, transparent 1px)`,
-              backgroundSize: "24px 24px",
-            }}
-          />
-
-          <div className="relative z-10 flex max-w-lg flex-col items-center text-center">
-            {/* Teal Compass Icon Container */}
-            <div className="h-12 w-12 rounded-2xl border border-[#14B8A6]/40 bg-[#0E2426] flex items-center justify-center text-[#14B8A6] shadow-lg">
-              <Compass className="h-6 w-6 stroke-[1.5]" />
-            </div>
-
-            {/* Category Label */}
-            <span className="text-[10px] font-bold text-[#666670] tracking-[0.2em] uppercase mt-6">
-              WORKSPACE SHELL
-            </span>
-
-            {/* Main Heading */}
-            <h1 className="text-2xl font-semibold text-[#F0F0F0] mt-3 leading-snug">
-              Canvas and collaboration tooling land here next.
-            </h1>
-
-            {/* Subtext */}
-            <p className="text-xs text-[#888892] mt-3 max-w-md leading-relaxed">
-              This room is ready for the shared architecture canvas, durable AI workflows, and real-time presence. For now, the shell is wired with project context and navigation only.
-            </p>
-          </div>
-
-          {/* Bottom Grip Handle */}
-          <div className="absolute bottom-2 left-1/2 -translate-x-1/2 h-1.5 w-12 rounded-full bg-[#27272A]" />
-        </main>
-
-        {/* Right In-Flow AI Copilot Sidebar */}
+        {/* Right Floating AI Copilot Sidebar */}
         {isAiSidebarOpen && (
-          <aside className="w-[320px] shrink-0 border-l border-[#1E1E24] bg-[#0E0E10] p-4 flex flex-col justify-between h-full select-none">
+          <aside className="absolute right-3 top-3 bottom-3 z-30 w-[320px] rounded-2xl border border-[#1E1E24] bg-[#0E0E10]/95 backdrop-blur-md p-4 flex flex-col justify-between select-none shadow-2xl transition-all">
             <div>
               {/* Header Title */}
               <div className="flex items-center justify-between">

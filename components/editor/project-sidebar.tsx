@@ -34,11 +34,11 @@ export function ProjectSidebar({
   if (!isOpen) return null;
 
   return (
-    <aside className="w-[260px] shrink-0 border-r border-[#1E1E24] bg-[#0E0E10] p-3 flex flex-col justify-between h-full select-none">
+    <aside className="absolute left-3 top-3 bottom-3 z-30 w-[280px] rounded-2xl border border-[#1E1E24] bg-[#0E0E10]/95 backdrop-blur-md p-3 flex flex-col justify-between select-none shadow-2xl transition-all">
       {/* Top Header & Navigation */}
-      <div className="flex flex-col gap-3">
+      <div className="flex flex-col gap-3 min-h-0 flex-1">
         {/* Header Title & Close Button */}
-        <div className="flex items-center justify-between px-1 pt-1">
+        <div className="flex items-center justify-between px-1 pt-1 shrink-0">
           <span className="text-xs font-semibold text-[#F0F0F0]">Projects</span>
           <Button
             variant="ghost"
@@ -52,7 +52,7 @@ export function ProjectSidebar({
         </div>
 
         {/* Navigation Tabs */}
-        <div className="bg-[#141418] p-1 rounded-full border border-[#222226] flex items-center">
+        <div className="bg-[#141418] p-1 rounded-full border border-[#222226] flex items-center shrink-0">
           <button
             type="button"
             onClick={() => setActiveTab("owned")}
@@ -80,7 +80,7 @@ export function ProjectSidebar({
         </div>
 
         {/* Projects List */}
-        <div className="space-y-1.5 mt-1 max-h-[calc(100vh-210px)] overflow-y-auto">
+        <div className="space-y-1.5 mt-1 flex-1 overflow-y-auto pr-1">
           {activeTab === "owned" ? (
             ownedProjects.length === 0 ? (
               <div className="p-4 text-center text-xs text-[#666670]">
