@@ -45,3 +45,4 @@ context/
 .env*
 .env
 .env.local
+/app/generated/prisma
