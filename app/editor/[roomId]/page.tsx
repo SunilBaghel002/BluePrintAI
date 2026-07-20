@@ -1,6 +1,7 @@
 import { auth, currentUser } from "@clerk/nextjs/server";
 import { redirect } from "next/navigation";
-import { EditorHomeView } from "@/components/editor";
+import { AccessDenied, EditorWorkspaceView } from "@/components/editor";
+import { checkProjectAccess } from "@/lib/project-access";
 import {
   getProjectsByOwner,
   getProjectsSharedWithUser,
@@ -8,21 +9,25 @@ import {
 import { slugify } from "@/lib/utils";
 import { Project } from "@/types/project";
 
-interface EditorWorkspacePageProps {
+interface EditorRoomPageProps {
   params: Promise<{
-    projectId: string;
+    roomId: string;
   }>;
 }
 
-export default async function EditorWorkspacePage({
-  params,
-}: EditorWorkspacePageProps) {
+export default async function EditorRoomPage({ params }: EditorRoomPageProps) {
   const { userId } = await auth();
   if (!userId) {
     redirect("/sign-in");
   }
 
-  const { projectId } = await params;
+  const { roomId } = await params;
+  const { hasAccess, project } = await checkProjectAccess(roomId);
+
+  if (!hasAccess || !project) {
+    return <AccessDenied />;
+  }
+
   const user = await currentUser();
   const userEmail = user?.primaryEmailAddress?.emailAddress ?? "";
 
@@ -49,11 +54,21 @@ export default async function EditorWorkspacePage({
     createdAt: new Date(p.createdAt).toLocaleDateString(),
   }));
 
+  const currentProject: Project = {
+    id: project.id,
+    name: project.name,
+    slug: slugify(project.name),
+    isOwner: project.ownerId === userId,
+    updatedAt: new Date(project.updatedAt).toLocaleDateString(),
+    createdAt: new Date(project.createdAt).toLocaleDateString(),
+  };
+
   return (
-    <EditorHomeView
+    <EditorWorkspaceView
+      project={currentProject}
       ownedProjects={ownedProjects}
       sharedProjects={sharedProjects}
-      activeProjectId={projectId}
+      roomId={roomId}
     />
   );
 }
