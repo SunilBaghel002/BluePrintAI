@@ -84,7 +84,7 @@ function DragPreviewGhost({ preview }: { preview: DragPreviewState }) {
   );
 }
 
-import { canvasDataSchema } from "@/types/canvas";
+import { canvasLoadSchema } from "@/types/canvas";
 
 import { StarterTemplatesModal, CanvasTemplate } from "@/components/editor";
 
@@ -151,7 +151,7 @@ function BaseCanvasContent({
       .then((res) => (res.ok ? res.json() : null))
       .then((data) => {
         if (!data?.canvas) return;
-        const parseResult = canvasDataSchema.safeParse(data.canvas);
+        const parseResult = canvasLoadSchema.safeParse(data.canvas);
         if (!parseResult.success) {
           console.warn("Invalid canvas structure from saved blob:", parseResult.error);
           return;
