@@ -19,6 +19,7 @@ import { CANVAS_NODE_TYPE, CANVAS_EDGE_TYPE, CanvasNode, ShapeType } from "@/typ
 import { CanvasNodeRenderer, NodeShape } from "./canvas-node";
 import { CanvasEdgeRenderer } from "./canvas-edge";
 import { ShapeToolbar, activeDraggedShapeConfig, setActiveDraggedShape } from "./shape-toolbar";
+import { CanvasControlBar } from "./canvas-control-bar";
 
 import "@xyflow/react/dist/style.css";
 import "@liveblocks/react-ui/styles.css";
@@ -204,6 +205,7 @@ function BaseCanvasContent() {
 
       {dragPreview && <DragPreviewGhost preview={dragPreview} />}
 
+      <CanvasControlBar />
       <ShapeToolbar />
     </div>
   );

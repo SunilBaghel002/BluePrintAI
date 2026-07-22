@@ -76,33 +76,44 @@ export function CanvasEdgeRenderer({
     );
   }, [id, labelValue, setEdges]);
 
+  const handleCancelEditing = React.useCallback(() => {
+    setIsEditing(false);
+    setLabelValue(label);
+  }, [label]);
+
   const handleLabelChange = React.useCallback(
     (e: React.ChangeEvent<HTMLInputElement>) => {
-      const newValue = e.target.value;
-      setLabelValue(newValue);
-      setEdges((edges) =>
-        edges.map((edge) => {
-          if (edge.id === id) {
-            return {
-              ...edge,
-              data: {
-                ...edge.data,
-                label: newValue,
-              },
-            };
-          }
-          return edge;
-        })
-      );
+      setLabelValue(e.target.value);
     },
-    [id, setEdges]
+    []
   );
 
   const strokeColor = selected || isHovered ? "#E4E4E7" : "#888892";
   const strokeWidth = selected || isHovered ? 2 : 1.5;
 
+  const markerId = `edge-marker-${id}-${selected || isHovered ? "active" : "inactive"}`;
+  const customMarkerEnd = markerEnd ? `url(#${markerId})` : undefined;
+
   return (
     <>
+      {markerEnd && (
+        <svg style={{ position: "absolute", width: 0, height: 0, pointerEvents: "none" }}>
+          <defs>
+            <marker
+              id={markerId}
+              viewBox="0 0 10 10"
+              refX="6"
+              refY="5"
+              markerWidth="7"
+              markerHeight="7"
+              orient="auto-start-reverse"
+            >
+              <path d="M 0 0 L 10 5 L 0 10 z" fill={strokeColor} />
+            </marker>
+          </defs>
+        </svg>
+      )}
+
       {/* Invisible wide path for easy hover and click hit-testing */}
       <path
         d={edgePath}
@@ -119,7 +130,7 @@ export function CanvasEdgeRenderer({
       <BaseEdge
         id={id}
         path={edgePath}
-        markerEnd={markerEnd}
+        markerEnd={customMarkerEnd}
         style={{
           stroke: strokeColor,
           strokeWidth,
@@ -147,7 +158,10 @@ export function CanvasEdgeRenderer({
               onChange={handleLabelChange}
               onBlur={handleFinishEditing}
               onKeyDown={(e) => {
-                if (e.key === "Enter" || e.key === "Escape") {
+                if (e.key === "Escape") {
+                  e.preventDefault();
+                  handleCancelEditing();
+                } else if (e.key === "Enter") {
                   e.preventDefault();
                   handleFinishEditing();
                 }

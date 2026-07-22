@@ -22,6 +22,7 @@ interface NodeShapeProps {
   onDoubleClick?: (e: React.MouseEvent) => void;
   onChangeLabel?: (e: React.ChangeEvent<HTMLTextAreaElement>) => void;
   onFinishEditing?: () => void;
+  onCancelEditing?: () => void;
 }
 
 export function NodeShape({
@@ -35,6 +36,7 @@ export function NodeShape({
   onDoubleClick,
   onChangeLabel,
   onFinishEditing,
+  onCancelEditing,
 }: NodeShapeProps) {
   const shapeType: ShapeType = (shape as ShapeType) || "rectangle";
   const fillColor = color || "#121215";
@@ -60,7 +62,10 @@ export function NodeShape({
           onChange={onChangeLabel}
           onBlur={onFinishEditing}
           onKeyDown={(e) => {
-            if (e.key === "Escape" || (e.key === "Enter" && !e.shiftKey)) {
+            if (e.key === "Escape") {
+              e.preventDefault();
+              onCancelEditing?.();
+            } else if (e.key === "Enter" && !e.shiftKey) {
               e.preventDefault();
               onFinishEditing?.();
             }
@@ -271,26 +276,16 @@ export function CanvasNodeRenderer({ id, data, selected }: NodeProps<CanvasNode>
     );
   }, [id, labelValue, setNodes]);
 
+  const handleCancelEditing = React.useCallback(() => {
+    setIsEditing(false);
+    setLabelValue(nodeData.label || "");
+  }, [nodeData.label]);
+
   const handleLabelChange = React.useCallback(
     (e: React.ChangeEvent<HTMLTextAreaElement>) => {
-      const newValue = e.target.value;
-      setLabelValue(newValue);
-      setNodes((nodes) =>
-        nodes.map((node) => {
-          if (node.id === id) {
-            return {
-              ...node,
-              data: {
-                ...node.data,
-                label: newValue,
-              },
-            };
-          }
-          return node;
-        })
-      );
+      setLabelValue(e.target.value);
     },
-    [id, setNodes]
+    []
   );
 
   const handleColorChange = React.useCallback(
@@ -373,7 +368,15 @@ export function CanvasNodeRenderer({ id, data, selected }: NodeProps<CanvasNode>
 
       {PORT_HANDLES.map((h) => (
         <React.Fragment key={h.id}>
-          {/* Main source & target handles for clean 4-port connections */}
+          {/* Target handle rendered underneath */}
+          <Handle
+            type="target"
+            id={`${h.id}-target`}
+            position={h.position}
+            isConnectable={true}
+            className={handleStyleClass}
+          />
+          {/* Source handle rendered on top so drag initiation starts from source */}
           <Handle
             type="source"
             id={h.id}
@@ -381,24 +384,10 @@ export function CanvasNodeRenderer({ id, data, selected }: NodeProps<CanvasNode>
             isConnectable={true}
             className={handleStyleClass}
           />
+          {/* Legacy fallback target handle with matching h.id */}
           <Handle
             type="target"
             id={h.id}
-            position={h.position}
-            isConnectable={true}
-            className={handleStyleClass}
-          />
-          {/* Fallback target handles for any legacy storage edges */}
-          <Handle
-            type="source"
-            id={`${h.id}-target`}
-            position={h.position}
-            isConnectable={true}
-            className="!h-2.5 !w-2.5 opacity-0 pointer-events-none z-0"
-          />
-          <Handle
-            type="target"
-            id={`${h.id}-target`}
             position={h.position}
             isConnectable={true}
             className="!h-2.5 !w-2.5 opacity-0 pointer-events-none z-0"
@@ -417,6 +406,7 @@ export function CanvasNodeRenderer({ id, data, selected }: NodeProps<CanvasNode>
         onDoubleClick={handleDoubleClick}
         onChangeLabel={handleLabelChange}
         onFinishEditing={handleFinishEditing}
+        onCancelEditing={handleCancelEditing}
       />
     </div>
   );
