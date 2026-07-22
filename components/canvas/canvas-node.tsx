@@ -1,74 +1,145 @@
 "use client";
 
 import * as React from "react";
-import { Handle, Position, NodeProps } from "@xyflow/react";
-import { CanvasNode, CanvasNodeData, ShapeType } from "@/types/canvas";
+import {
+  Handle,
+  Position,
+  NodeProps,
+  NodeResizer,
+  NodeToolbar,
+  useReactFlow,
+} from "@xyflow/react";
+import { CanvasNode, CanvasNodeData, ShapeType, NODE_COLOR_PAIRS } from "@/types/canvas";
 
 interface NodeShapeProps {
   shape?: ShapeType | string;
   label?: string;
   color?: string;
+  textColor?: string;
   selected?: boolean;
+  isEditing?: boolean;
+  labelValue?: string;
+  onDoubleClick?: (e: React.MouseEvent) => void;
+  onChangeLabel?: (e: React.ChangeEvent<HTMLTextAreaElement>) => void;
+  onFinishEditing?: () => void;
+  onCancelEditing?: () => void;
 }
 
 export function NodeShape({
   shape = "rectangle",
   label = "",
   color,
+  textColor,
   selected = false,
+  isEditing = false,
+  labelValue = "",
+  onDoubleClick,
+  onChangeLabel,
+  onFinishEditing,
+  onCancelEditing,
 }: NodeShapeProps) {
   const shapeType: ShapeType = (shape as ShapeType) || "rectangle";
   const fillColor = color || "#121215";
-  const strokeColor = selected ? "#14B8A6" : "#27272A";
+  const labelColor = textColor || "#F0F0F0";
+  const strokeColor = selected ? "#71717A" : "#27272A";
+
+  const textareaRef = React.useRef<HTMLTextAreaElement>(null);
+
+  React.useEffect(() => {
+    if (isEditing && textareaRef.current) {
+      textareaRef.current.focus();
+      textareaRef.current.select();
+    }
+  }, [isEditing]);
+
+  const renderLabelContent = (maxWClass = "max-w-[85%]") => {
+    if (isEditing) {
+      return (
+        <textarea
+          ref={textareaRef}
+          rows={1}
+          value={labelValue}
+          onChange={onChangeLabel}
+          onBlur={onFinishEditing}
+          onKeyDown={(e) => {
+            if (e.key === "Escape") {
+              e.preventDefault();
+              onCancelEditing?.();
+            } else if (e.key === "Enter" && !e.shiftKey) {
+              e.preventDefault();
+              onFinishEditing?.();
+            }
+          }}
+          className={`nodrag nopan relative z-20 w-full ${maxWClass} mx-auto resize-none bg-transparent text-center font-medium text-xs outline-none border-b border-[#71717A] p-0 focus:ring-0 select-text overflow-hidden`}
+          style={{ color: labelColor }}
+          onClick={(e) => e.stopPropagation()}
+          onDoubleClick={(e) => e.stopPropagation()}
+        />
+      );
+    }
+
+    return (
+      <span
+        className={`block w-full ${maxWClass} mx-auto truncate text-center font-medium text-xs select-none z-10 cursor-text px-1 py-0.5 rounded transition-colors hover:bg-white/5 ${
+          !label ? "text-[#666670] italic" : ""
+        }`}
+        style={{ color: label ? labelColor : undefined }}
+        title="Double-click to edit label"
+      >
+        {label || "Double-click to edit"}
+      </span>
+    );
+  };
 
   switch (shapeType) {
     case "rectangle":
       return (
         <div
-          className={`relative flex h-full w-full items-center justify-center rounded-xl border p-3 text-xs text-[#F0F0F0] transition-colors ${
-            selected ? "border-[#14B8A6]" : "border-[#27272A] hover:border-[#3F3F46]"
+          onDoubleClick={onDoubleClick}
+          className={`relative flex h-full w-full items-center justify-center rounded-xl border p-2 text-xs transition-colors overflow-hidden ${
+            selected ? "border-[#71717A]" : "border-[#27272A] hover:border-[#52525B]"
           }`}
-          style={{ backgroundColor: fillColor }}
+          style={{ backgroundColor: fillColor, color: labelColor }}
         >
-          <span className="truncate text-center font-medium select-none z-10">
-            {label || "\u00A0"}
-          </span>
+          {renderLabelContent("max-w-[85%]")}
         </div>
       );
 
     case "pill":
       return (
         <div
-          className={`relative flex h-full w-full items-center justify-center rounded-full border p-3 text-xs text-[#F0F0F0] transition-colors ${
-            selected ? "border-[#14B8A6]" : "border-[#27272A] hover:border-[#3F3F46]"
+          onDoubleClick={onDoubleClick}
+          className={`relative flex h-full w-full items-center justify-center rounded-full border p-2 text-xs transition-colors overflow-hidden ${
+            selected ? "border-[#71717A]" : "border-[#27272A] hover:border-[#52525B]"
           }`}
-          style={{ backgroundColor: fillColor }}
+          style={{ backgroundColor: fillColor, color: labelColor }}
         >
-          <span className="truncate text-center font-medium select-none z-10">
-            {label || "\u00A0"}
-          </span>
+          {renderLabelContent("max-w-[75%]")}
         </div>
       );
 
     case "circle":
       return (
         <div
-          className={`relative flex h-full w-full items-center justify-center rounded-full border p-3 text-xs text-[#F0F0F0] transition-colors ${
-            selected ? "border-[#14B8A6]" : "border-[#27272A] hover:border-[#3F3F46]"
+          onDoubleClick={onDoubleClick}
+          className={`relative flex h-full w-full items-center justify-center rounded-full border p-2 text-xs transition-colors overflow-hidden ${
+            selected ? "border-[#71717A]" : "border-[#27272A] hover:border-[#52525B]"
           }`}
-          style={{ backgroundColor: fillColor }}
+          style={{ backgroundColor: fillColor, color: labelColor }}
         >
-          <span className="truncate text-center font-medium select-none z-10">
-            {label || "\u00A0"}
-          </span>
+          {renderLabelContent("max-w-[70%]")}
         </div>
       );
 
     case "diamond":
       return (
-        <div className="relative h-full w-full flex items-center justify-center">
+        <div
+          onDoubleClick={onDoubleClick}
+          className="relative h-full w-full flex items-center justify-center overflow-hidden cursor-text"
+          style={{ color: labelColor }}
+        >
           <svg
-            className="absolute inset-0 h-full w-full overflow-visible"
+            className="absolute inset-0 h-full w-full overflow-visible pointer-events-none"
             viewBox="0 0 100 100"
             preserveAspectRatio="none"
           >
@@ -81,17 +152,21 @@ export function NodeShape({
               className="transition-colors"
             />
           </svg>
-          <span className="relative z-10 truncate px-4 text-center text-xs font-medium text-[#F0F0F0] select-none">
-            {label || "\u00A0"}
-          </span>
+          <div className="relative z-10 w-full text-center overflow-hidden">
+            {renderLabelContent("max-w-[60%]")}
+          </div>
         </div>
       );
 
     case "hexagon":
       return (
-        <div className="relative h-full w-full flex items-center justify-center">
+        <div
+          onDoubleClick={onDoubleClick}
+          className="relative h-full w-full flex items-center justify-center overflow-hidden cursor-text"
+          style={{ color: labelColor }}
+        >
           <svg
-            className="absolute inset-0 h-full w-full overflow-visible"
+            className="absolute inset-0 h-full w-full overflow-visible pointer-events-none"
             viewBox="0 0 100 100"
             preserveAspectRatio="none"
           >
@@ -104,17 +179,21 @@ export function NodeShape({
               className="transition-colors"
             />
           </svg>
-          <span className="relative z-10 truncate px-4 text-center text-xs font-medium text-[#F0F0F0] select-none">
-            {label || "\u00A0"}
-          </span>
+          <div className="relative z-10 w-full text-center overflow-hidden">
+            {renderLabelContent("max-w-[70%]")}
+          </div>
         </div>
       );
 
     case "cylinder":
       return (
-        <div className="relative h-full w-full flex items-center justify-center">
+        <div
+          onDoubleClick={onDoubleClick}
+          className="relative h-full w-full flex items-center justify-center overflow-hidden cursor-text"
+          style={{ color: labelColor }}
+        >
           <svg
-            className="absolute inset-0 h-full w-full overflow-visible"
+            className="absolute inset-0 h-full w-full overflow-visible pointer-events-none"
             viewBox="0 0 100 100"
             preserveAspectRatio="none"
           >
@@ -140,9 +219,9 @@ export function NodeShape({
               className="transition-colors"
             />
           </svg>
-          <span className="relative z-10 truncate px-4 text-center text-xs font-medium text-[#F0F0F0] select-none">
-            {label || "\u00A0"}
-          </span>
+          <div className="relative z-10 w-full text-center pt-2 overflow-hidden">
+            {renderLabelContent("max-w-[75%]")}
+          </div>
         </div>
       );
 
@@ -158,42 +237,160 @@ const PORT_HANDLES = [
   { id: "left", position: Position.Left },
 ] as const;
 
-export function CanvasNodeRenderer({ data, selected }: NodeProps<CanvasNode>) {
+export function CanvasNodeRenderer({ id, data, selected }: NodeProps<CanvasNode>) {
   const nodeData = data as CanvasNodeData;
+  const { setNodes } = useReactFlow();
+
+  const [isEditing, setIsEditing] = React.useState(false);
+  const [labelValue, setLabelValue] = React.useState(nodeData.label || "");
+
+  const shapeType: ShapeType = (nodeData.shape as ShapeType) || "rectangle";
+
+  React.useEffect(() => {
+    if (!isEditing) {
+      setLabelValue(nodeData.label || "");
+    }
+  }, [nodeData.label, isEditing]);
+
+  const handleDoubleClick = React.useCallback((e: React.MouseEvent) => {
+    e.stopPropagation();
+    e.preventDefault();
+    setIsEditing(true);
+  }, []);
+
+  const handleFinishEditing = React.useCallback(() => {
+    setIsEditing(false);
+    setNodes((nodes) =>
+      nodes.map((node) => {
+        if (node.id === id) {
+          return {
+            ...node,
+            data: {
+              ...node.data,
+              label: labelValue,
+            },
+          };
+        }
+        return node;
+      })
+    );
+  }, [id, labelValue, setNodes]);
+
+  const handleCancelEditing = React.useCallback(() => {
+    setIsEditing(false);
+    setLabelValue(nodeData.label || "");
+  }, [nodeData.label]);
+
+  const handleLabelChange = React.useCallback(
+    (e: React.ChangeEvent<HTMLTextAreaElement>) => {
+      setLabelValue(e.target.value);
+    },
+    []
+  );
+
+  const handleColorChange = React.useCallback(
+    (bg: string, text: string) => {
+      setNodes((nodes) =>
+        nodes.map((node) => {
+          if (node.id === id) {
+            return {
+              ...node,
+              data: {
+                ...node.data,
+                color: bg,
+                textColor: text,
+              },
+            };
+          }
+          return node;
+        })
+      );
+    },
+    [id, setNodes]
+  );
+
+  const handleStyleClass = `!h-2.5 !w-2.5 !border-2 !border-[#0A0A0C] !bg-white hover:!scale-125 transition-all duration-150 z-30 cursor-crosshair shadow-sm ${
+    selected ? "opacity-100" : "opacity-0 group-hover/node:opacity-100"
+  }`;
 
   return (
-    <div className="relative h-full w-full">
+    <div
+      onDoubleClick={handleDoubleClick}
+      className="group/node relative h-full w-full"
+    >
+      <NodeResizer
+        isVisible={selected}
+        minWidth={80}
+        minHeight={50}
+        keepAspectRatio={shapeType === "circle"}
+        lineClassName="!border-[#71717A]/60"
+        handleClassName="!h-2.5 !w-2.5 !bg-white !border-2 !border-[#0A0A0C] !rounded-full hover:!scale-125 z-40 shadow-sm"
+      />
+
+      <NodeToolbar
+        isVisible={selected && !isEditing}
+        position={Position.Top}
+        offset={12}
+        className="nodrag nopan flex items-center gap-1.5 rounded-full border border-[#1E1E24] bg-[#0E0E10]/95 px-2.5 py-1.5 shadow-2xl backdrop-blur-md z-50"
+      >
+        {NODE_COLOR_PAIRS.map((pair) => {
+          const isCurrent =
+            (nodeData.color || "#121215") === pair.bg &&
+            (nodeData.textColor || "#F0F0F0") === pair.text;
+
+          return (
+            <button
+              key={pair.id}
+              type="button"
+              onClick={(e) => {
+                e.stopPropagation();
+                handleColorChange(pair.bg, pair.text);
+              }}
+              title={pair.label}
+              className={`group relative flex h-4 w-4 items-center justify-center rounded-full border transition-all duration-150 ${
+                isCurrent
+                  ? "scale-125 border-white ring-2 ring-white/40 z-10"
+                  : "border-white/20 hover:scale-110 hover:border-white/60"
+              }`}
+              style={{
+                backgroundColor: pair.bg,
+                boxShadow: `0 0 6px ${pair.text}40`,
+              }}
+            >
+              <span
+                className="h-1.5 w-1.5 rounded-full opacity-80 pointer-events-none"
+                style={{ backgroundColor: pair.text }}
+              />
+            </button>
+          );
+        })}
+      </NodeToolbar>
+
       {PORT_HANDLES.map((h) => (
         <React.Fragment key={h.id}>
-          {/* Main source & target handles for clean 4-port connections */}
-          <Handle
-            type="source"
-            id={h.id}
-            position={h.position}
-            isConnectable={true}
-            className="!h-3 !w-3 !border-2 !border-black !bg-[#14B8A6] hover:!bg-[#2DD4BF] hover:!scale-125 transition-all z-30 cursor-crosshair"
-          />
-          <Handle
-            type="target"
-            id={h.id}
-            position={h.position}
-            isConnectable={true}
-            className="!h-3 !w-3 !border-2 !border-black !bg-[#14B8A6] hover:!bg-[#2DD4BF] hover:!scale-125 transition-all z-30 cursor-crosshair"
-          />
-          {/* Fallback target handles for any legacy storage edges */}
-          <Handle
-            type="source"
-            id={`${h.id}-target`}
-            position={h.position}
-            isConnectable={true}
-            className="!h-3 !w-3 opacity-0 pointer-events-none z-0"
-          />
+          {/* Target handle rendered underneath */}
           <Handle
             type="target"
             id={`${h.id}-target`}
             position={h.position}
             isConnectable={true}
-            className="!h-3 !w-3 opacity-0 pointer-events-none z-0"
+            className={handleStyleClass}
+          />
+          {/* Source handle rendered on top so drag initiation starts from source */}
+          <Handle
+            type="source"
+            id={h.id}
+            position={h.position}
+            isConnectable={true}
+            className={handleStyleClass}
+          />
+          {/* Legacy fallback target handle with matching h.id */}
+          <Handle
+            type="target"
+            id={h.id}
+            position={h.position}
+            isConnectable={true}
+            className="!h-2.5 !w-2.5 opacity-0 pointer-events-none z-0"
           />
         </React.Fragment>
       ))}
@@ -202,7 +399,14 @@ export function CanvasNodeRenderer({ data, selected }: NodeProps<CanvasNode>) {
         shape={nodeData.shape}
         label={nodeData.label}
         color={nodeData.color}
+        textColor={nodeData.textColor}
         selected={selected}
+        isEditing={isEditing}
+        labelValue={labelValue}
+        onDoubleClick={handleDoubleClick}
+        onChangeLabel={handleLabelChange}
+        onFinishEditing={handleFinishEditing}
+        onCancelEditing={handleCancelEditing}
       />
     </div>
   );

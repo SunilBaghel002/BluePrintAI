@@ -8,14 +8,18 @@ import {
   BackgroundVariant,
   MiniMap,
   ConnectionMode,
+  MarkerType,
   useReactFlow,
   useViewport,
   type NodeTypes,
+  type EdgeTypes,
 } from "@xyflow/react";
 import { useLiveblocksFlow, Cursors } from "@liveblocks/react-flow";
-import { CANVAS_NODE_TYPE, CanvasNode, ShapeType } from "@/types/canvas";
+import { CANVAS_NODE_TYPE, CANVAS_EDGE_TYPE, CanvasNode, ShapeType } from "@/types/canvas";
 import { CanvasNodeRenderer, NodeShape } from "./canvas-node";
+import { CanvasEdgeRenderer } from "./canvas-edge";
 import { ShapeToolbar, activeDraggedShapeConfig, setActiveDraggedShape } from "./shape-toolbar";
+import { CanvasControlBar } from "./canvas-control-bar";
 
 import "@xyflow/react/dist/style.css";
 import "@liveblocks/react-ui/styles.css";
@@ -23,6 +27,10 @@ import "@liveblocks/react-flow/styles.css";
 
 const nodeTypes: NodeTypes = {
   [CANVAS_NODE_TYPE]: CanvasNodeRenderer as NodeTypes[string],
+};
+
+const edgeTypes: EdgeTypes = {
+  [CANVAS_EDGE_TYPE]: CanvasEdgeRenderer as EdgeTypes[string],
 };
 
 let idCounter = 1;
@@ -159,14 +167,22 @@ function BaseCanvasContent() {
         nodes={nodes}
         edges={edges}
         nodeTypes={nodeTypes}
+        edgeTypes={edgeTypes}
         onNodesChange={onNodesChange}
         onEdgesChange={onEdgesChange}
         onConnect={onConnect}
         onDelete={onDelete}
         connectionMode={ConnectionMode.Loose}
+        snapToGrid={true}
+        snapGrid={[12, 12]}
         defaultEdgeOptions={{
-          style: { stroke: "#14B8A6", strokeWidth: 2 },
-          animated: true,
+          type: CANVAS_EDGE_TYPE,
+          markerEnd: {
+            type: MarkerType.ArrowClosed,
+            color: "#888892",
+            width: 14,
+            height: 14,
+          },
         }}
         fitView
         colorMode="dark"
@@ -189,6 +205,7 @@ function BaseCanvasContent() {
 
       {dragPreview && <DragPreviewGhost preview={dragPreview} />}
 
+      <CanvasControlBar />
       <ShapeToolbar />
     </div>
   );
