@@ -1,7 +1,7 @@
 "use client";
 
 import * as React from "react";
-import { PanelLeft, Share2, Sparkles } from "lucide-react";
+import { LayoutTemplate, PanelLeft, Share2, Sparkles } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Show, SignInButton, SignUpButton, UserButton } from "@clerk/nextjs";
 
@@ -10,6 +10,7 @@ interface EditorNavbarProps {
   onToggleSidebar?: () => void;
   projectName?: string;
   onShare?: () => void;
+  onOpenTemplates?: () => void;
   onToggleAiSidebar?: () => void;
   isAiSidebarOpen?: boolean;
 }
@@ -19,6 +20,7 @@ export function EditorNavbar({
   onToggleSidebar,
   projectName = "Untitled Project",
   onShare,
+  onOpenTemplates,
   onToggleAiSidebar,
   isAiSidebarOpen = true,
 }: EditorNavbarProps) {
@@ -47,6 +49,18 @@ export function EditorNavbar({
 
       {/* Right Section: Workspace Actions & User Auth */}
       <div className="flex items-center gap-2">
+        {onOpenTemplates && (
+          <Button
+            type="button"
+            size="sm"
+            onClick={onOpenTemplates}
+            className="h-8 px-3.5 rounded-full border border-[#27272A] bg-[#141418] text-xs font-medium text-[#F0F0F0] hover:bg-[#1E1E22] transition-colors flex items-center gap-1.5"
+          >
+            <LayoutTemplate className="h-3.5 w-3.5 text-[#888892] stroke-[1.5]" />
+            Templates
+          </Button>
+        )}
+
         {onShare && (
           <Button
             type="button"

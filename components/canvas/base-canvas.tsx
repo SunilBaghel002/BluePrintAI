@@ -13,9 +13,17 @@ import {
   useViewport,
   type NodeTypes,
   type EdgeTypes,
+  type NodeChange,
+  type EdgeChange,
 } from "@xyflow/react";
 import { useLiveblocksFlow, Cursors } from "@liveblocks/react-flow";
-import { CANVAS_NODE_TYPE, CANVAS_EDGE_TYPE, CanvasNode, ShapeType } from "@/types/canvas";
+import {
+  CANVAS_NODE_TYPE,
+  CANVAS_EDGE_TYPE,
+  CanvasNode,
+  CanvasEdge,
+  ShapeType,
+} from "@/types/canvas";
 import { CanvasNodeRenderer, NodeShape } from "./canvas-node";
 import { CanvasEdgeRenderer } from "./canvas-edge";
 import { ShapeToolbar, activeDraggedShapeConfig, setActiveDraggedShape } from "./shape-toolbar";
@@ -70,12 +78,23 @@ function DragPreviewGhost({ preview }: { preview: DragPreviewState }) {
   );
 }
 
-function BaseCanvasContent() {
-  const { screenToFlowPosition } = useReactFlow();
+import { StarterTemplatesModal, CanvasTemplate } from "@/components/editor";
+
+interface BaseCanvasProps {
+  isTemplatesOpen?: boolean;
+  onCloseTemplates?: () => void;
+}
+
+function BaseCanvasContent({
+  isTemplatesOpen = false,
+  onCloseTemplates = () => {},
+}: BaseCanvasProps) {
+  const { screenToFlowPosition, fitView } = useReactFlow();
   const [dragPreview, setDragPreview] = React.useState<DragPreviewState | null>(null);
+  const shouldFitViewRef = React.useRef(false);
 
   const { nodes, edges, onNodesChange, onEdgesChange, onConnect, onDelete } =
-    useLiveblocksFlow<CanvasNode>({
+    useLiveblocksFlow<CanvasNode, CanvasEdge>({
       suspense: true,
       nodes: {
         initial: [],
@@ -84,6 +103,36 @@ function BaseCanvasContent() {
         initial: [],
       },
     });
+
+  React.useEffect(() => {
+    if (shouldFitViewRef.current && nodes.length > 0) {
+      shouldFitViewRef.current = false;
+      fitView({ duration: 300 });
+    }
+  }, [nodes, fitView]);
+
+  const handleSelectTemplate = React.useCallback(
+    (template: CanvasTemplate) => {
+      shouldFitViewRef.current = true;
+
+      const nodeChanges: NodeChange<CanvasNode>[] = [
+        ...nodes.map((n) => ({ type: "remove" as const, id: n.id })),
+        ...template.nodes.map((n) => ({ type: "add" as const, item: n })),
+      ];
+      if (nodeChanges.length > 0) {
+        onNodesChange(nodeChanges);
+      }
+
+      const edgeChanges: EdgeChange<CanvasEdge>[] = [
+        ...edges.map((e) => ({ type: "remove" as const, id: e.id })),
+        ...template.edges.map((e) => ({ type: "add" as const, item: e })),
+      ];
+      if (edgeChanges.length > 0) {
+        onEdgesChange(edgeChanges);
+      }
+    },
+    [nodes, edges, onNodesChange, onEdgesChange]
+  );
 
   const handleDragOver = React.useCallback(
     (event: React.DragEvent<HTMLDivElement>) => {
@@ -207,14 +256,26 @@ function BaseCanvasContent() {
 
       <CanvasControlBar />
       <ShapeToolbar />
+
+      <StarterTemplatesModal
+        isOpen={isTemplatesOpen}
+        onClose={onCloseTemplates}
+        onSelectTemplate={handleSelectTemplate}
+      />
     </div>
   );
 }
 
-export function BaseCanvas() {
+export function BaseCanvas({
+  isTemplatesOpen = false,
+  onCloseTemplates = () => {},
+}: BaseCanvasProps) {
   return (
     <ReactFlowProvider>
-      <BaseCanvasContent />
+      <BaseCanvasContent
+        isTemplatesOpen={isTemplatesOpen}
+        onCloseTemplates={onCloseTemplates}
+      />
     </ReactFlowProvider>
   );
 }
