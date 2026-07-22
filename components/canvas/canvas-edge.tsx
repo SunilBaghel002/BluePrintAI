@@ -8,6 +8,7 @@ import {
   useReactFlow,
   BaseEdge,
 } from "@xyflow/react";
+import { X } from "lucide-react";
 
 export function CanvasEdgeRenderer({
   id,
@@ -21,7 +22,7 @@ export function CanvasEdgeRenderer({
   selected,
   markerEnd,
 }: EdgeProps) {
-  const { setEdges } = useReactFlow();
+  const { setEdges, deleteElements } = useReactFlow();
   const [isHovered, setIsHovered] = React.useState(false);
   const [isEditing, setIsEditing] = React.useState(false);
 
@@ -88,6 +89,14 @@ export function CanvasEdgeRenderer({
     []
   );
 
+  const handleDeleteEdge = React.useCallback(
+    (e: React.MouseEvent) => {
+      e.stopPropagation();
+      deleteElements({ edges: [{ id }] });
+    },
+    [id, deleteElements]
+  );
+
   const strokeColor = selected || isHovered ? "#E4E4E7" : "#888892";
   const strokeWidth = selected || isHovered ? 2 : 1.5;
 
@@ -148,7 +157,9 @@ export function CanvasEdgeRenderer({
             transform: `translate(-50%, -50%) translate(${labelX}px,${labelY}px)`,
             pointerEvents: "all",
           }}
-          className="nodrag nopan z-20"
+          className="nodrag nopan z-20 flex items-center gap-1"
+          onMouseEnter={() => setIsHovered(true)}
+          onMouseLeave={() => setIsHovered(false)}
         >
           {isEditing ? (
             <input
@@ -184,6 +195,17 @@ export function CanvasEdgeRenderer({
               Add label
             </div>
           ) : null}
+
+          {(selected || isHovered) && !isEditing && (
+            <button
+              type="button"
+              onClick={handleDeleteEdge}
+              title="Delete connection (Backspace)"
+              className="flex h-5 w-5 items-center justify-center rounded-full bg-[#121215] border border-[#27272A] text-[#888892] hover:bg-red-500/20 hover:text-red-400 hover:border-red-500/40 transition-all shadow-md shrink-0"
+            >
+              <X className="h-3 w-3 stroke-[1.5]" />
+            </button>
+          )}
         </div>
       </EdgeLabelRenderer>
     </>
