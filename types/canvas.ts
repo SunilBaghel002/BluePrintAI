@@ -1,4 +1,5 @@
 import type { Node, Edge } from "@xyflow/react";
+import { z } from "zod";
 
 export const CANVAS_NODE_TYPE = "canvasNode" as const;
 export const CANVAS_EDGE_TYPE = "canvasEdge" as const;
@@ -60,3 +61,36 @@ export const SHAPE_CONFIGS: Record<ShapeType, ShapeConfig> = {
   cylinder: { type: "cylinder", label: "Cylinder", width: 120, height: 140 },
   hexagon: { type: "hexagon", label: "Hexagon", width: 130, height: 110 },
 };
+
+const nodeSchema = z
+  .object({
+    id: z.string(),
+    type: z.string(),
+    position: z.object({
+      x: z.number(),
+      y: z.number(),
+    }),
+    data: z.record(z.string(), z.unknown()),
+    style: z.record(z.string(), z.unknown()).optional(),
+    selected: z.boolean().optional(),
+  })
+  .passthrough();
+
+const edgeSchema = z
+  .object({
+    id: z.string(),
+    type: z.string().optional(),
+    source: z.string(),
+    target: z.string(),
+    sourceHandle: z.string().nullable().optional(),
+    targetHandle: z.string().nullable().optional(),
+    label: z.union([z.string(), z.null()]).optional(),
+    data: z.record(z.string(), z.unknown()).optional(),
+    markerEnd: z.record(z.string(), z.unknown()).optional(),
+  })
+  .passthrough();
+
+export const canvasDataSchema = z.object({
+  nodes: z.array(nodeSchema).default([]),
+  edges: z.array(edgeSchema).default([]),
+});

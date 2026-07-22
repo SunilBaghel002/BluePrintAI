@@ -8,7 +8,7 @@ import {
   useReactFlow,
   BaseEdge,
 } from "@xyflow/react";
-import { X } from "lucide-react";
+import { Tag, X } from "lucide-react";
 
 export function CanvasEdgeRenderer({
   id,
@@ -19,6 +19,7 @@ export function CanvasEdgeRenderer({
   sourcePosition,
   targetPosition,
   data,
+  label: labelProp,
   selected,
   markerEnd,
 }: EdgeProps) {
@@ -26,7 +27,8 @@ export function CanvasEdgeRenderer({
   const [isHovered, setIsHovered] = React.useState(false);
   const [isEditing, setIsEditing] = React.useState(false);
 
-  const label = (data?.label as string) || "";
+  const label =
+    (data?.label as string) || (typeof labelProp === "string" ? labelProp : "") || "";
   const [labelValue, setLabelValue] = React.useState(label);
 
   const inputRef = React.useRef<HTMLInputElement>(null);
@@ -56,19 +58,22 @@ export function CanvasEdgeRenderer({
 
   const handleStartEdit = React.useCallback((e: React.MouseEvent) => {
     e.stopPropagation();
+    e.preventDefault();
     setIsEditing(true);
   }, []);
 
   const handleFinishEditing = React.useCallback(() => {
     setIsEditing(false);
+    const trimmed = labelValue.trim();
     setEdges((edges) =>
       edges.map((edge) => {
         if (edge.id === id) {
           return {
             ...edge,
+            label: trimmed,
             data: {
               ...edge.data,
-              label: labelValue,
+              label: trimmed,
             },
           };
         }
@@ -123,12 +128,12 @@ export function CanvasEdgeRenderer({
         </svg>
       )}
 
-      {/* Invisible wide path for easy hover and click hit-testing */}
+      {/* Invisible wide path for easy hover, selection and click hit-testing */}
       <path
         d={edgePath}
         fill="none"
         stroke="transparent"
-        strokeWidth={20}
+        strokeWidth={24}
         className="cursor-pointer"
         onMouseEnter={() => setIsHovered(true)}
         onMouseLeave={() => setIsHovered(false)}
@@ -149,7 +154,7 @@ export function CanvasEdgeRenderer({
         }}
       />
 
-      {/* Inline Edge Label Renderer */}
+      {/* Inline Edge Label & Action Renderer */}
       <EdgeLabelRenderer>
         <div
           style={{
@@ -177,22 +182,29 @@ export function CanvasEdgeRenderer({
                   handleFinishEditing();
                 }
               }}
-              className="bg-[#121215] border border-[#71717A] text-xs text-[#E4E4E7] px-2 py-0.5 rounded-full outline-none shadow-lg text-center min-w-[60px]"
+              placeholder="e.g. Request, Response, Data..."
+              className="bg-[#0E0E10]/95 border border-[#52525B] text-xs font-medium text-[#F0F0F0] placeholder:text-[#666670] px-3.5 py-1 rounded-full outline-none shadow-2xl backdrop-blur-md text-center min-w-[110px] focus:border-white/60 focus:ring-1 focus:ring-white/20 transition-all select-text"
               onClick={(e) => e.stopPropagation()}
+              onDoubleClick={(e) => e.stopPropagation()}
             />
           ) : label ? (
             <div
+              onClick={handleStartEdit}
               onDoubleClick={handleStartEdit}
-              className="group flex items-center gap-1 bg-[#121215]/90 border border-[#27272A] hover:border-[#71717A] text-[11px] text-[#A1A1AA] hover:text-[#F0F0F0] px-2 py-0.5 rounded-full shadow-md backdrop-blur-sm cursor-pointer transition-colors"
+              title="Click or double-click to edit label"
+              className="group flex items-center gap-1.5 bg-[#0E0E10]/95 border border-[#3F3F46] hover:border-white/50 text-xs font-medium text-[#F0F0F0] px-3.5 py-1 rounded-full shadow-xl backdrop-blur-md cursor-pointer transition-all hover:scale-105"
             >
               <span>{label}</span>
             </div>
           ) : selected || isHovered ? (
             <div
+              onClick={handleStartEdit}
               onDoubleClick={handleStartEdit}
-              className="opacity-60 hover:opacity-100 text-[10px] text-[#71717A] bg-[#121215]/80 px-2 py-0.5 rounded-full border border-dashed border-[#27272A] cursor-pointer transition-all"
+              title="Click to add edge label"
+              className="group flex items-center gap-1 bg-[#0E0E10]/80 border border-dashed border-[#52525B] hover:border-white/60 text-[11px] font-medium text-[#A1A1AA] hover:text-[#F0F0F0] px-3 py-0.5 rounded-full shadow-md backdrop-blur-sm cursor-pointer transition-all hover:scale-105"
             >
-              Add label
+              <Tag className="h-3 w-3 text-[#71717A] group-hover:text-white stroke-[1.5]" />
+              <span>Add label</span>
             </div>
           ) : null}
 
@@ -201,7 +213,7 @@ export function CanvasEdgeRenderer({
               type="button"
               onClick={handleDeleteEdge}
               title="Delete connection (Backspace)"
-              className="flex h-5 w-5 items-center justify-center rounded-full bg-[#121215] border border-[#27272A] text-[#888892] hover:bg-red-500/20 hover:text-red-400 hover:border-red-500/40 transition-all shadow-md shrink-0"
+              className="flex h-5 w-5 items-center justify-center rounded-full bg-[#0E0E10] border border-[#3F3F46] text-[#888892] hover:bg-red-500/20 hover:text-red-400 hover:border-red-500/50 transition-all shadow-md shrink-0 ml-0.5"
             >
               <X className="h-3 w-3 stroke-[1.5]" />
             </button>

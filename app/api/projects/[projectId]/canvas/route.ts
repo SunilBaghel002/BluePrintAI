@@ -1,14 +1,9 @@
 import { NextResponse } from "next/server";
 import { auth } from "@clerk/nextjs/server";
-import { z } from "zod";
 import { put } from "@vercel/blob";
 import { checkProjectAccess } from "@/lib/project-access";
-import { getProjectById, updateProjectCanvasBlob } from "@/lib/db/projects";
-
-const canvasDataSchema = z.object({
-  nodes: z.array(z.record(z.string(), z.any())).default([]),
-  edges: z.array(z.record(z.string(), z.any())).default([]),
-});
+import { updateProjectCanvasBlob } from "@/lib/db/projects";
+import { canvasDataSchema } from "@/types/canvas";
 
 interface RouteParams {
   params: Promise<{
@@ -77,9 +72,8 @@ export async function PUT(request: Request, { params }: RouteParams) {
     });
   } catch (error) {
     console.error("Vercel Blob canvas save error:", error);
-    const errorMessage = error instanceof Error ? error.message : "Failed to save canvas blob";
     return NextResponse.json(
-      { error: errorMessage },
+      { error: "Failed to save canvas blob" },
       { status: 500 }
     );
   }
@@ -98,21 +92,27 @@ export async function GET(request: Request, { params }: RouteParams) {
     return NextResponse.json({ error: "Forbidden" }, { status: 403 });
   }
 
+  const project = access.project;
+  if (!project || !project.canvasJsonPath) {
+    return NextResponse.json({ canvas: null });
+  }
+
+  const token = process.env.BLOB_READ_WRITE_TOKEN;
+  if (!token) {
+    console.error("BLOB_READ_WRITE_TOKEN is missing in environment variables");
+    return NextResponse.json(
+      { error: "Blob storage configuration error: BLOB_READ_WRITE_TOKEN missing" },
+      { status: 500 }
+    );
+  }
+
   try {
-    const project = await getProjectById(projectId);
-    if (!project || !project.canvasJsonPath) {
-      return NextResponse.json({ canvas: null });
-    }
-
-    const token = process.env.BLOB_READ_WRITE_TOKEN;
-    const fetchHeaders: Record<string, string> = {};
-    if (token) {
-      fetchHeaders["Authorization"] = `Bearer ${token}`;
-    }
-
     const response = await fetch(project.canvasJsonPath, {
-      headers: fetchHeaders,
+      headers: {
+        Authorization: `Bearer ${token}`,
+      },
       cache: "no-store",
+      signal: AbortSignal.timeout(8000),
     });
 
     if (!response.ok) {

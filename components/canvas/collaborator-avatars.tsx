@@ -22,7 +22,9 @@ export function CollaboratorAvatars() {
       others.map((other) => ({
         connectionId: other.connectionId,
         id: other.id,
-        info: other.info,
+        name: other.info?.name,
+        avatar: other.info?.avatar,
+        color: other.info?.color,
       })),
     shallow
   );
@@ -42,7 +44,7 @@ export function CollaboratorAvatars() {
         continue;
       }
 
-      const key = other.id || other.info?.name || String(other.connectionId);
+      const key = other.id || other.name || String(other.connectionId);
       if (!seenUserKeys.has(key)) {
         seenUserKeys.add(key);
         unique.push(other);
@@ -56,20 +58,20 @@ export function CollaboratorAvatars() {
   const overflowCount = Math.max(0, collaborators.length - 5);
 
   return (
-    <div className="absolute top-3 right-4 z-40 nodrag nopan flex items-center gap-2 rounded-full border border-[#1E1E24] bg-[#0E0E10]/95 px-3 py-1.5 shadow-2xl backdrop-blur-md text-[#F0F0F0] select-none">
+    <div className="absolute top-3 right-4 z-40 nodrag nopan flex items-center gap-2 rounded-full border border-surface-border bg-base/95 px-3 py-1.5 shadow-2xl backdrop-blur-md text-primary-text select-none">
       {/* Collaborator Avatars */}
       {collaborators.length > 0 && (
         <div className="flex items-center -space-x-2">
           {visibleCollaborators.map((other) => {
-            const name = other.info?.name || "Collaborator";
-            const avatar = other.info?.avatar;
-            const color = other.info?.color || "#2563EB";
+            const name = other.name || "Collaborator";
+            const avatar = other.avatar;
+            const color = other.color || "#2563EB";
 
             return (
               <div
                 key={other.connectionId}
                 title={name}
-                className="relative flex h-7 w-7 shrink-0 items-center justify-center rounded-full ring-2 ring-[#0E0E10] overflow-hidden"
+                className="relative flex h-7 w-7 shrink-0 items-center justify-center rounded-full ring-2 ring-base overflow-hidden"
                 style={{ backgroundColor: color }}
               >
                 {avatar ? (
@@ -91,7 +93,7 @@ export function CollaboratorAvatars() {
           {overflowCount > 0 && (
             <div
               title={`${overflowCount} more collaborator${overflowCount > 1 ? "s" : ""}`}
-              className="relative flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-[#1E1E24] ring-2 ring-[#0E0E10] text-[10px] font-semibold text-[#A0A0A0]"
+              className="relative flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-surface-border ring-2 ring-base text-[10px] font-semibold text-muted-text"
             >
               +{overflowCount}
             </div>
@@ -101,7 +103,7 @@ export function CollaboratorAvatars() {
 
       {/* Divider - only appears when collaborators exist */}
       {collaborators.length > 0 && (
-        <div className="h-4 w-px bg-[#27272A]" />
+        <div className="h-4 w-px bg-surface-border" />
       )}
 
       {/* Clerk UserButton for current user */}

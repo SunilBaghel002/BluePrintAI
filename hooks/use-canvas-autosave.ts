@@ -46,6 +46,7 @@ export function useCanvasAutosave({
             nodes: nodesToSave,
             edges: edgesToSave,
           }),
+          signal: AbortSignal.timeout(10000),
         });
 
         // Invalidate stale in-flight requests
@@ -96,9 +97,16 @@ export function useCanvasAutosave({
       return;
     }
 
-    // Check if nodes or edges content changed meaningfully
-    const nodesChanged = JSON.stringify(nodes) !== JSON.stringify(prevNodesRef.current);
-    const edgesChanged = JSON.stringify(edges) !== JSON.stringify(prevEdgesRef.current);
+    // Optimized change detection: cheap length and reference checks before stringifying
+    const nodesLengthChanged = nodes.length !== prevNodesRef.current.length;
+    const edgesLengthChanged = edges.length !== prevEdgesRef.current.length;
+
+    const nodesChanged =
+      nodesLengthChanged ||
+      (nodes !== prevNodesRef.current && JSON.stringify(nodes) !== JSON.stringify(prevNodesRef.current));
+    const edgesChanged =
+      edgesLengthChanged ||
+      (edges !== prevEdgesRef.current && JSON.stringify(edges) !== JSON.stringify(prevEdgesRef.current));
 
     if (!nodesChanged && !edgesChanged) {
       return;

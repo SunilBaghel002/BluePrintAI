@@ -84,6 +84,8 @@ function DragPreviewGhost({ preview }: { preview: DragPreviewState }) {
   );
 }
 
+import { canvasDataSchema } from "@/types/canvas";
+
 import { StarterTemplatesModal, CanvasTemplate } from "@/components/editor";
 
 export interface BaseCanvasProps {
@@ -99,25 +101,12 @@ function BaseCanvasContent({
   onSaveStatusChange,
   onRegisterSaveHandler,
 }: BaseCanvasProps) {
-  const { screenToFlowPosition, fitView, getNodes, getEdges, deleteElements } = useReactFlow();
+  const { screenToFlowPosition, fitView } = useReactFlow();
   const [dragPreview, setDragPreview] = React.useState<DragPreviewState | null>(null);
   const shouldFitViewRef = React.useRef(false);
   const updateMyPresence = useUpdateMyPresence();
   const room = useRoom();
   const roomId = room.id;
-
-  const handleDeleteSelected = React.useCallback(() => {
-    const selectedNodes = getNodes().filter((n) => n.selected);
-    const selectedEdges = getEdges().filter((e) => e.selected);
-
-    if (selectedNodes.length > 0 || selectedEdges.length > 0) {
-      deleteElements({ nodes: selectedNodes, edges: selectedEdges });
-    }
-  }, [getNodes, getEdges, deleteElements]);
-
-  useKeyboardShortcuts({
-    onDeleteSelected: handleDeleteSelected,
-  });
 
   const { nodes, edges, onNodesChange, onEdgesChange, onConnect, onDelete } =
     useLiveblocksFlow<CanvasNode, CanvasEdge>({
@@ -161,10 +150,17 @@ function BaseCanvasContent({
     fetch(`/api/projects/${roomId}/canvas`)
       .then((res) => (res.ok ? res.json() : null))
       .then((data) => {
-        if (data?.canvas && (data.canvas.nodes?.length > 0 || data.canvas.edges?.length > 0)) {
-          const loadedNodes: CanvasNode[] = data.canvas.nodes || [];
-          const loadedEdges: CanvasEdge[] = data.canvas.edges || [];
+        if (!data?.canvas) return;
+        const parseResult = canvasDataSchema.safeParse(data.canvas);
+        if (!parseResult.success) {
+          console.warn("Invalid canvas structure from saved blob:", parseResult.error);
+          return;
+        }
 
+        const loadedNodes = parseResult.data.nodes as CanvasNode[];
+        const loadedEdges = parseResult.data.edges as CanvasEdge[];
+
+        if (loadedNodes.length > 0 || loadedEdges.length > 0) {
           if (loadedNodes.length > 0) {
             onNodesChange(loadedNodes.map((n) => ({ type: "add", item: n })));
           }

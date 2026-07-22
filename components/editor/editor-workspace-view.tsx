@@ -47,6 +47,13 @@ export function EditorWorkspaceView({
     }
   }, []);
 
+  const handleRegisterSaveHandler = React.useCallback(
+    (fn: () => Promise<boolean>) => {
+      saveHandlerRef.current = fn;
+    },
+    []
+  );
+
   const {
     dialogType,
     selectedProject,
@@ -91,9 +98,7 @@ export function EditorWorkspaceView({
             isTemplatesOpen={isTemplatesOpen}
             onCloseTemplates={() => setIsTemplatesOpen(false)}
             onSaveStatusChange={setSaveStatus}
-            onRegisterSaveHandler={(fn) => {
-              saveHandlerRef.current = fn;
-            }}
+            onRegisterSaveHandler={handleRegisterSaveHandler}
           />
         </main>
 

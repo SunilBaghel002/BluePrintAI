@@ -7,7 +7,6 @@ interface KeyboardShortcutsOptions {
   onZoomOut?: () => void;
   onUndo?: () => void;
   onRedo?: () => void;
-  onDeleteSelected?: () => void;
 }
 
 export function useKeyboardShortcuts({
@@ -15,7 +14,6 @@ export function useKeyboardShortcuts({
   onZoomOut,
   onUndo,
   onRedo,
-  onDeleteSelected,
 }: KeyboardShortcutsOptions) {
   React.useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
@@ -49,13 +47,6 @@ export function useKeyboardShortcuts({
         return;
       }
 
-      // Backspace or Delete -> Delete selected canvas elements
-      if (!isModifier && (e.key === "Backspace" || e.key === "Delete")) {
-        e.preventDefault();
-        onDeleteSelected?.();
-        return;
-      }
-
       // '+' or '=' -> Zoom In
       if (!isModifier && (e.key === "+" || e.key === "=")) {
         e.preventDefault();
@@ -75,5 +66,5 @@ export function useKeyboardShortcuts({
     return () => {
       window.removeEventListener("keydown", handleKeyDown);
     };
-  }, [onZoomIn, onZoomOut, onUndo, onRedo, onDeleteSelected]);
+  }, [onZoomIn, onZoomOut, onUndo, onRedo]);
 }

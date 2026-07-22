@@ -11,7 +11,7 @@ function CursorPointer({ color }: { color: string }) {
       className="h-5 w-5 drop-shadow-md select-none pointer-events-none"
       viewBox="0 0 24 24"
       fill={color}
-      stroke="#0E0E10"
+      stroke="currentColor"
       strokeWidth="1.5"
     >
       <path d="M5.653 3.123A.75.75 0 0 0 4.5 3.75v16.5a.75.75 0 0 0 1.28.53l4.72-4.72h6.25a.75.75 0 0 0 .53-1.28L5.653 3.123z" />
@@ -42,14 +42,14 @@ const IndividualLiveCursor = React.memo(function IndividualLiveCursor({
   if (currentUserId && other.id === currentUserId) return null;
 
   const name = other.info?.name || "Collaborator";
-  const color = other.info?.color || "#2563EB";
+  const color = other.info?.color || "#3B82F6";
 
   const screenX = other.cursor.x * vpZoom + vpX;
   const screenY = other.cursor.y * vpZoom + vpY;
 
   return (
     <div
-      className="absolute left-0 top-0 transition-transform duration-75 ease-out pointer-events-none select-none flex items-start"
+      className="absolute left-0 top-0 transition-transform duration-75 ease-out pointer-events-none select-none flex items-start text-black"
       style={{
         transform: `translate3d(${screenX}px, ${screenY}px, 0)`,
       }}
