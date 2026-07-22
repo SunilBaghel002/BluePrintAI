@@ -32,6 +32,7 @@ export function EditorWorkspaceView({
   const [isSidebarOpen, setIsSidebarOpen] = React.useState(true);
   const [isAiSidebarOpen, setIsAiSidebarOpen] = React.useState(true);
   const [isShareOpen, setIsShareOpen] = React.useState(false);
+  const [isTemplatesOpen, setIsTemplatesOpen] = React.useState(false);
 
   const {
     dialogType,
@@ -59,6 +60,7 @@ export function EditorWorkspaceView({
         isSidebarOpen={isSidebarOpen}
         onToggleSidebar={() => setIsSidebarOpen((prev) => !prev)}
         projectName={project.name}
+        onOpenTemplates={() => setIsTemplatesOpen(true)}
         onShare={() => setIsShareOpen(true)}
         onToggleAiSidebar={() => setIsAiSidebarOpen((prev) => !prev)}
         isAiSidebarOpen={isAiSidebarOpen}
@@ -68,7 +70,11 @@ export function EditorWorkspaceView({
       <div className="relative flex flex-1 overflow-hidden">
         {/* Full Viewport Canvas Area */}
         <main className="absolute inset-0 z-0 bg-black overflow-hidden">
-          <CanvasRoom roomId={roomId} />
+          <CanvasRoom
+            roomId={roomId}
+            isTemplatesOpen={isTemplatesOpen}
+            onCloseTemplates={() => setIsTemplatesOpen(false)}
+          />
         </main>
 
         {/* Left Floating Project Sidebar */}

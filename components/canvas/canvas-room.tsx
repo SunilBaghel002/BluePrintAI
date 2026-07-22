@@ -11,6 +11,8 @@ import { BaseCanvas } from "./base-canvas";
 
 interface CanvasRoomProps {
   roomId: string;
+  isTemplatesOpen?: boolean;
+  onCloseTemplates?: () => void;
 }
 
 class CanvasErrorBoundary extends React.Component<
@@ -52,7 +54,11 @@ class CanvasErrorBoundary extends React.Component<
   }
 }
 
-export function CanvasRoom({ roomId }: CanvasRoomProps) {
+export function CanvasRoom({
+  roomId,
+  isTemplatesOpen = false,
+  onCloseTemplates = () => {},
+}: CanvasRoomProps) {
   return (
     <CanvasErrorBoundary>
       <LiveblocksProvider authEndpoint="/api/liveblocks-auth">
@@ -73,7 +79,12 @@ export function CanvasRoom({ roomId }: CanvasRoomProps) {
               </div>
             }
           >
-            {() => <BaseCanvas />}
+            {() => (
+              <BaseCanvas
+                isTemplatesOpen={isTemplatesOpen}
+                onCloseTemplates={onCloseTemplates}
+              />
+            )}
           </ClientSideSuspense>
         </RoomProvider>
       </LiveblocksProvider>
