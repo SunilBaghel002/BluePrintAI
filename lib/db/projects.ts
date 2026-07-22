@@ -97,5 +97,17 @@ export async function removeProjectCollaborator(
   return result;
 }
 
+export async function updateProjectCanvasBlob(
+  id: string,
+  canvasBlobUrl: string
+) {
+  return prisma.project.update({
+    where: { id },
+    data: {
+      canvasJsonPath: canvasBlobUrl,
+    },
+  });
+}
+
 
 

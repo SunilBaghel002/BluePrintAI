@@ -1,4 +1,5 @@
 import type { Node, Edge } from "@xyflow/react";
+import { z } from "zod";
 
 export const CANVAS_NODE_TYPE = "canvasNode" as const;
 export const CANVAS_EDGE_TYPE = "canvasEdge" as const;
@@ -60,3 +61,54 @@ export const SHAPE_CONFIGS: Record<ShapeType, ShapeConfig> = {
   cylinder: { type: "cylinder", label: "Cylinder", width: 120, height: 140 },
   hexagon: { type: "hexagon", label: "Hexagon", width: 130, height: 110 },
 };
+
+const nodeDataSchema = z
+  .object({
+    label: z.string(),
+    color: z.string().optional(),
+    textColor: z.string().optional(),
+    shape: z.string().optional(),
+    width: z.number().optional(),
+    height: z.number().optional(),
+  })
+  .passthrough();
+
+const nodeSchema = z
+  .object({
+    id: z.string(),
+    type: z.string(),
+    position: z.object({
+      x: z.number(),
+      y: z.number(),
+    }),
+    data: nodeDataSchema,
+    style: z.record(z.string(), z.unknown()).optional(),
+    selected: z.boolean().optional(),
+  })
+  .passthrough();
+
+const edgeSchema = z
+  .object({
+    id: z.string(),
+    type: z.string().optional(),
+    source: z.string(),
+    target: z.string(),
+    sourceHandle: z.string().nullable().optional(),
+    targetHandle: z.string().nullable().optional(),
+    label: z.union([z.string(), z.null()]).optional(),
+    data: z.record(z.string(), z.unknown()).optional(),
+    markerEnd: z.record(z.string(), z.unknown()).optional(),
+  })
+  .passthrough();
+
+// Strict PUT payload schema requiring both nodes and edges
+export const canvasDataSchema = z.object({
+  nodes: z.array(nodeSchema),
+  edges: z.array(edgeSchema),
+});
+
+// Load schema tolerating default empty arrays for legacy/incomplete data
+export const canvasLoadSchema = z.object({
+  nodes: z.array(nodeSchema).default([]),
+  edges: z.array(edgeSchema).default([]),
+});

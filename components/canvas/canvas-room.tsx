@@ -9,10 +9,14 @@ import {
 import { Loader2, AlertTriangle } from "lucide-react";
 import { BaseCanvas } from "./base-canvas";
 
+import { SaveStatus } from "@/hooks/use-canvas-autosave";
+
 interface CanvasRoomProps {
   roomId: string;
   isTemplatesOpen?: boolean;
   onCloseTemplates?: () => void;
+  onSaveStatusChange?: (status: SaveStatus) => void;
+  onRegisterSaveHandler?: (saveFn: () => Promise<boolean>) => void;
 }
 
 class CanvasErrorBoundary extends React.Component<
@@ -58,6 +62,8 @@ export function CanvasRoom({
   roomId,
   isTemplatesOpen = false,
   onCloseTemplates = () => {},
+  onSaveStatusChange,
+  onRegisterSaveHandler,
 }: CanvasRoomProps) {
   return (
     <CanvasErrorBoundary>
@@ -66,6 +72,7 @@ export function CanvasRoom({
           id={roomId}
           initialPresence={{
             cursor: null,
+            thinking: false,
             isThinking: false,
           }}
         >
@@ -83,6 +90,8 @@ export function CanvasRoom({
               <BaseCanvas
                 isTemplatesOpen={isTemplatesOpen}
                 onCloseTemplates={onCloseTemplates}
+                onSaveStatusChange={onSaveStatusChange}
+                onRegisterSaveHandler={onRegisterSaveHandler}
               />
             )}
           </ClientSideSuspense>

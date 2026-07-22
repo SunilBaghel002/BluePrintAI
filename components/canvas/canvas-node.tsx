@@ -1,14 +1,8 @@
 "use client";
 
 import * as React from "react";
-import {
-  Handle,
-  Position,
-  NodeProps,
-  NodeResizer,
-  NodeToolbar,
-  useReactFlow,
-} from "@xyflow/react";
+import { Handle, Position, NodeProps, NodeResizer, NodeToolbar, useReactFlow } from "@xyflow/react";
+import { Trash2 } from "lucide-react";
 import { CanvasNode, CanvasNodeData, ShapeType, NODE_COLOR_PAIRS } from "@/types/canvas";
 
 interface NodeShapeProps {
@@ -239,7 +233,7 @@ const PORT_HANDLES = [
 
 export function CanvasNodeRenderer({ id, data, selected }: NodeProps<CanvasNode>) {
   const nodeData = data as CanvasNodeData;
-  const { setNodes } = useReactFlow();
+  const { setNodes, deleteElements } = useReactFlow();
 
   const [isEditing, setIsEditing] = React.useState(false);
   const [labelValue, setLabelValue] = React.useState(nodeData.label || "");
@@ -309,6 +303,14 @@ export function CanvasNodeRenderer({ id, data, selected }: NodeProps<CanvasNode>
     [id, setNodes]
   );
 
+  const handleDeleteNode = React.useCallback(
+    (e: React.MouseEvent) => {
+      e.stopPropagation();
+      deleteElements({ nodes: [{ id }] });
+    },
+    [id, deleteElements]
+  );
+
   const handleStyleClass = `!h-2.5 !w-2.5 !border-2 !border-[#0A0A0C] !bg-white hover:!scale-125 transition-all duration-150 z-30 cursor-crosshair shadow-sm ${
     selected ? "opacity-100" : "opacity-0 group-hover/node:opacity-100"
   }`;
@@ -364,6 +366,17 @@ export function CanvasNodeRenderer({ id, data, selected }: NodeProps<CanvasNode>
             </button>
           );
         })}
+
+        <div className="h-3 w-px bg-[#27272A] mx-0.5" />
+
+        <button
+          type="button"
+          onClick={handleDeleteNode}
+          title="Delete shape (Backspace)"
+          className="flex h-5 w-5 items-center justify-center rounded-full text-[#888892] hover:bg-red-500/20 hover:text-red-400 transition-colors"
+        >
+          <Trash2 className="h-3 w-3 stroke-[1.5]" />
+        </button>
       </NodeToolbar>
 
       {PORT_HANDLES.map((h) => (
@@ -384,10 +397,33 @@ export function CanvasNodeRenderer({ id, data, selected }: NodeProps<CanvasNode>
             isConnectable={true}
             className={handleStyleClass}
           />
-          {/* Legacy fallback target handle with matching h.id */}
+          {/* Fallback source handle for id={`${h.id}-target`} */}
+          <Handle
+            type="source"
+            id={`${h.id}-target`}
+            position={h.position}
+            isConnectable={true}
+            className="!h-2.5 !w-2.5 opacity-0 pointer-events-none z-0"
+          />
+          {/* Fallback target handle for id={h.id} */}
           <Handle
             type="target"
             id={h.id}
+            position={h.position}
+            isConnectable={true}
+            className="!h-2.5 !w-2.5 opacity-0 pointer-events-none z-0"
+          />
+          {/* Fallback handles for `${h.id}-source` */}
+          <Handle
+            type="source"
+            id={`${h.id}-source`}
+            position={h.position}
+            isConnectable={true}
+            className="!h-2.5 !w-2.5 opacity-0 pointer-events-none z-0"
+          />
+          <Handle
+            type="target"
+            id={`${h.id}-source`}
             position={h.position}
             isConnectable={true}
             className="!h-2.5 !w-2.5 opacity-0 pointer-events-none z-0"

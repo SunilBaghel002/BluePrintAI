@@ -16,7 +16,9 @@ import {
   type NodeChange,
   type EdgeChange,
 } from "@xyflow/react";
-import { useLiveblocksFlow, Cursors } from "@liveblocks/react-flow";
+import { useLiveblocksFlow } from "@liveblocks/react-flow";
+import { useUpdateMyPresence, useRoom } from "@liveblocks/react";
+import { useCanvasAutosave, SaveStatus } from "@/hooks/use-canvas-autosave";
 import {
   CANVAS_NODE_TYPE,
   CANVAS_EDGE_TYPE,
@@ -28,6 +30,10 @@ import { CanvasNodeRenderer, NodeShape } from "./canvas-node";
 import { CanvasEdgeRenderer } from "./canvas-edge";
 import { ShapeToolbar, activeDraggedShapeConfig, setActiveDraggedShape } from "./shape-toolbar";
 import { CanvasControlBar } from "./canvas-control-bar";
+import { CollaboratorAvatars } from "./collaborator-avatars";
+import { LiveCursors } from "./live-cursors";
+
+import { useKeyboardShortcuts } from "@/hooks/use-keyboard-shortcuts";
 
 import "@xyflow/react/dist/style.css";
 import "@liveblocks/react-ui/styles.css";
@@ -78,20 +84,29 @@ function DragPreviewGhost({ preview }: { preview: DragPreviewState }) {
   );
 }
 
+import { canvasLoadSchema } from "@/types/canvas";
+
 import { StarterTemplatesModal, CanvasTemplate } from "@/components/editor";
 
-interface BaseCanvasProps {
+export interface BaseCanvasProps {
   isTemplatesOpen?: boolean;
   onCloseTemplates?: () => void;
+  onSaveStatusChange?: (status: SaveStatus) => void;
+  onRegisterSaveHandler?: (saveFn: () => Promise<boolean>) => void;
 }
 
 function BaseCanvasContent({
   isTemplatesOpen = false,
   onCloseTemplates = () => {},
+  onSaveStatusChange,
+  onRegisterSaveHandler,
 }: BaseCanvasProps) {
   const { screenToFlowPosition, fitView } = useReactFlow();
   const [dragPreview, setDragPreview] = React.useState<DragPreviewState | null>(null);
   const shouldFitViewRef = React.useRef(false);
+  const updateMyPresence = useUpdateMyPresence();
+  const room = useRoom();
+  const roomId = room.id;
 
   const { nodes, edges, onNodesChange, onEdgesChange, onConnect, onDelete } =
     useLiveblocksFlow<CanvasNode, CanvasEdge>({
@@ -103,6 +118,108 @@ function BaseCanvasContent({
         initial: [],
       },
     });
+
+  const [isInitialLoading, setIsInitialLoading] = React.useState(true);
+
+  const { saveStatus, triggerManualSave, seedSnapshots } = useCanvasAutosave({
+    projectId: roomId,
+    nodes,
+    edges,
+    isInitialLoading,
+  });
+
+  React.useEffect(() => {
+    onSaveStatusChange?.(saveStatus);
+  }, [saveStatus, onSaveStatusChange]);
+
+  React.useEffect(() => {
+    onRegisterSaveHandler?.(triggerManualSave);
+  }, [triggerManualSave, onRegisterSaveHandler]);
+
+  const hasAttemptedLoadRef = React.useRef(false);
+
+  React.useEffect(() => {
+    if (hasAttemptedLoadRef.current) return;
+    hasAttemptedLoadRef.current = true;
+
+    if (nodes.length > 0 || edges.length > 0) {
+      setIsInitialLoading(false);
+      return;
+    }
+
+    fetch(`/api/projects/${roomId}/canvas`)
+      .then((res) => (res.ok ? res.json() : null))
+      .then((data) => {
+        if (!data?.canvas) return;
+        const parseResult = canvasLoadSchema.safeParse(data.canvas);
+        if (!parseResult.success) {
+          console.warn("Invalid canvas structure from saved blob:", parseResult.error);
+          return;
+        }
+
+        const loadedNodes = parseResult.data.nodes as CanvasNode[];
+        const loadedEdges = parseResult.data.edges as CanvasEdge[];
+
+        if (loadedNodes.length > 0 || loadedEdges.length > 0) {
+          if (loadedNodes.length > 0) {
+            onNodesChange(loadedNodes.map((n) => ({ type: "add", item: n })));
+          }
+          if (loadedEdges.length > 0) {
+            onEdgesChange(loadedEdges.map((e) => ({ type: "add", item: e })));
+          }
+
+          seedSnapshots(loadedNodes, loadedEdges);
+          shouldFitViewRef.current = true;
+        }
+      })
+      .catch((err) => {
+        console.error("Failed to load saved canvas blob:", err);
+      })
+      .finally(() => {
+        setIsInitialLoading(false);
+      });
+  }, [roomId, nodes.length, edges.length, onNodesChange, onEdgesChange, seedSnapshots]);
+
+  const animationFrameRef = React.useRef<number | null>(null);
+  const pendingCursorRef = React.useRef<{ x: number; y: number } | null>(null);
+
+  const handlePointerMove = React.useCallback(
+    (event: React.PointerEvent<HTMLDivElement>) => {
+      const position = screenToFlowPosition({
+        x: event.clientX,
+        y: event.clientY,
+      });
+
+      pendingCursorRef.current = position;
+
+      if (animationFrameRef.current === null) {
+        animationFrameRef.current = requestAnimationFrame(() => {
+          animationFrameRef.current = null;
+          if (pendingCursorRef.current) {
+            updateMyPresence({ cursor: pendingCursorRef.current });
+          }
+        });
+      }
+    },
+    [screenToFlowPosition, updateMyPresence]
+  );
+
+  const handlePointerLeave = React.useCallback(() => {
+    if (animationFrameRef.current !== null) {
+      cancelAnimationFrame(animationFrameRef.current);
+      animationFrameRef.current = null;
+    }
+    pendingCursorRef.current = null;
+    updateMyPresence({ cursor: null });
+  }, [updateMyPresence]);
+
+  React.useEffect(() => {
+    return () => {
+      if (animationFrameRef.current !== null) {
+        cancelAnimationFrame(animationFrameRef.current);
+      }
+    };
+  }, []);
 
   React.useEffect(() => {
     if (shouldFitViewRef.current && nodes.length > 0) {
@@ -208,6 +325,8 @@ function BaseCanvasContent({
   return (
     <div
       className="relative h-full w-full bg-black overflow-hidden"
+      onPointerMove={handlePointerMove}
+      onPointerLeave={handlePointerLeave}
       onDragOver={handleDragOver}
       onDragLeave={handleDragLeave}
       onDrop={handleDrop}
@@ -221,6 +340,7 @@ function BaseCanvasContent({
         onEdgesChange={onEdgesChange}
         onConnect={onConnect}
         onDelete={onDelete}
+        deleteKeyCode={["Backspace", "Delete"]}
         connectionMode={ConnectionMode.Loose}
         snapToGrid={true}
         snapGrid={[12, 12]}
@@ -249,11 +369,12 @@ function BaseCanvasContent({
           maskColor="rgba(0, 0, 0, 0.75)"
           className="!bg-[#0E0E10] !border !border-[#1E1E24] !rounded-xl overflow-hidden"
         />
-        <Cursors />
       </ReactFlow>
 
       {dragPreview && <DragPreviewGhost preview={dragPreview} />}
 
+      <LiveCursors />
+      <CollaboratorAvatars />
       <CanvasControlBar />
       <ShapeToolbar />
 
@@ -269,12 +390,16 @@ function BaseCanvasContent({
 export function BaseCanvas({
   isTemplatesOpen = false,
   onCloseTemplates = () => {},
+  onSaveStatusChange,
+  onRegisterSaveHandler,
 }: BaseCanvasProps) {
   return (
     <ReactFlowProvider>
       <BaseCanvasContent
         isTemplatesOpen={isTemplatesOpen}
         onCloseTemplates={onCloseTemplates}
+        onSaveStatusChange={onSaveStatusChange}
+        onRegisterSaveHandler={onRegisterSaveHandler}
       />
     </ReactFlowProvider>
   );
