@@ -93,6 +93,8 @@ Layout Guidelines:
    - "hexagon" for Third-party APIs, External Webhooks, Payment Gateways.
 4. Keep labels standard and concise (e.g., "API Gateway", "Auth Service", "PostgreSQL DB", "Redis Cache", "Kafka Queue").
 5. Connect dependent components with "add_edge" with concise labels when appropriate (e.g. "REST", "gRPC", "Pub/Sub", "SQL").
+6. ALWAYS assign vibrant "color" (hex background e.g. "#1E3A5F", "#143823", "#0C374D", "#450A0A", "#3B2D08", "#2E1065", "#3F122B", "#3D2010") and matching "textColor" (hex text e.g. "#60A5FA", "#4ADE80", "#38BDF8", "#F87171", "#FACC15", "#C084FC", "#F472B6", "#FB923C") fields on all "add_node" actions according to node type and prompt instructions.
+7. If the user explicitly asks for specific colors (e.g., "red", "blue", "green", "purple", "yellow", "pink"), make sure to apply matching background and text colors (e.g. red: color "#450A0A", textColor "#F87171") to those requested nodes.
 `;
 
 /**
@@ -117,18 +119,32 @@ function synthesizeArchitecture(prompt: string) {
     p.includes("s3") ||
     p.includes("upload");
 
+  const COLOR_MAP: Record<string, { color: string; textColor: string }> = {
+    red: { color: "#450A0A", textColor: "#F87171" },
+    blue: { color: "#1E3A5F", textColor: "#60A5FA" },
+    green: { color: "#143823", textColor: "#4ADE80" },
+    purple: { color: "#2E1065", textColor: "#C084FC" },
+    yellow: { color: "#3B2D08", textColor: "#FACC15" },
+    pink: { color: "#3F122B", textColor: "#F472B6" },
+  };
+
+  const requestedColorKey = Object.keys(COLOR_MAP).find((cName) => p.includes(cName));
+  const colorPair = requestedColorKey ? COLOR_MAP[requestedColorKey] : null;
+
   const actions: z.infer<typeof actionSchema>[] = [];
 
   // Row 1: Client & Ingress
   actions.push({
     action: "add_node",
     id: `node_client_${timestamp}`,
-    label: "Web / Mobile Client",
+    label: p.includes("react native") ? "React Native Mobile App" : "Web / Mobile Client",
     shape: "pill",
     x: 100,
     y: 100,
-    width: 160,
+    width: 170,
     height: 70,
+    color: colorPair ? colorPair.color : "#1E3A5F",
+    textColor: colorPair ? colorPair.textColor : "#60A5FA",
   });
 
   actions.push({
@@ -140,6 +156,8 @@ function synthesizeArchitecture(prompt: string) {
     y: 100,
     width: 150,
     height: 70,
+    color: colorPair ? colorPair.color : "#3B2D08",
+    textColor: colorPair ? colorPair.textColor : "#FACC15",
   });
 
   actions.push({
@@ -162,6 +180,8 @@ function synthesizeArchitecture(prompt: string) {
     y: 280,
     width: 120,
     height: 120,
+    color: colorPair ? colorPair.color : "#2E1065",
+    textColor: colorPair ? colorPair.textColor : "#C084FC",
   });
   actions.push({
     action: "add_edge",
@@ -182,6 +202,8 @@ function synthesizeArchitecture(prompt: string) {
       y: 280,
       width: 160,
       height: 80,
+      color: colorPair ? colorPair.color : "#450A0A",
+      textColor: colorPair ? colorPair.textColor : "#F87171",
     });
     actions.push({
       action: "add_edge",
@@ -201,6 +223,8 @@ function synthesizeArchitecture(prompt: string) {
       y: 280,
       width: 160,
       height: 100,
+      color: colorPair ? colorPair.color : "#0C374D",
+      textColor: colorPair ? colorPair.textColor : "#38BDF8",
     });
     actions.push({
       action: "add_edge",
@@ -220,6 +244,8 @@ function synthesizeArchitecture(prompt: string) {
       y: 280,
       width: 160,
       height: 80,
+      color: colorPair ? colorPair.color : "#1E3A5F",
+      textColor: colorPair ? colorPair.textColor : "#60A5FA",
     });
     actions.push({
       action: "add_edge",
@@ -229,6 +255,31 @@ function synthesizeArchitecture(prompt: string) {
       label: "REST / gRPC",
     });
     colX += 220;
+  }
+
+  if (p.includes("redis") || p.includes("cache")) {
+    actions.push({
+      action: "add_node",
+      id: `node_cache_${timestamp}`,
+      label: "Redis Cache",
+      shape: "circle",
+      x: colX,
+      y: 280,
+      width: 120,
+      height: 120,
+      color: colorPair ? colorPair.color : "#0C374D",
+      textColor: colorPair ? colorPair.textColor : "#38BDF8",
+    });
+
+    const cacheSourceId = isRealtime ? `node_pubsub_${timestamp}` : `node_app_${timestamp}`;
+    actions.push({
+      action: "add_edge",
+      id: `edge_app_cache_${timestamp}`,
+      source: cacheSourceId,
+      target: `node_cache_${timestamp}`,
+      label: "Cache Hits",
+    });
+    colX += 200;
   }
 
   if (isMedia) {
@@ -241,6 +292,8 @@ function synthesizeArchitecture(prompt: string) {
       y: 280,
       width: 150,
       height: 80,
+      color: colorPair ? colorPair.color : "#3F122B",
+      textColor: colorPair ? colorPair.textColor : "#F472B6",
     });
     actions.push({
       action: "add_edge",
@@ -252,15 +305,18 @@ function synthesizeArchitecture(prompt: string) {
   }
 
   // Row 3: Persistence & Storage Layer
+  const dbLabel = p.includes("postgresql") || p.includes("postgres") ? "PostgreSQL DB" : "Primary Database";
   actions.push({
     action: "add_node",
     id: `node_db_${timestamp}`,
-    label: "PostgreSQL DB",
+    label: dbLabel,
     shape: "cylinder",
     x: 220,
     y: 480,
     width: 150,
     height: 90,
+    color: colorPair ? colorPair.color : "#143823",
+    textColor: colorPair ? colorPair.textColor : "#4ADE80",
   });
 
   if (isRealtime) {
@@ -283,6 +339,8 @@ function synthesizeArchitecture(prompt: string) {
       y: 480,
       width: 160,
       height: 90,
+      color: "#3F122B",
+      textColor: "#F472B6",
     });
     actions.push({
       action: "add_edge",
@@ -347,6 +405,22 @@ export const designAgentTask = task({
         });
       } catch (err) {
         logger.warn("Failed to broadcast AI status", { error: err });
+      }
+    };
+
+    const broadcastChatMessage = async (content: string) => {
+      try {
+        await liveblocks.broadcastEvent(roomId, {
+          type: "AI_CHAT",
+          id: `msg_ai_${Date.now()}`,
+          sender: "Ghost AI",
+          senderId: "ghost-ai",
+          role: "assistant",
+          content,
+          timestamp: Date.now(),
+        });
+      } catch (err) {
+        logger.warn("Failed to broadcast AI chat message", { error: err });
       }
     };
 
@@ -440,8 +514,10 @@ export const designAgentTask = task({
         actions,
       });
 
-      // 5. Complete Task & Broadcast Success
-      await broadcastStatus("complete", summary || "Architecture generation complete!");
+      // 5. Complete Task & Broadcast Success (both status and chat message)
+      const completionMsg = summary || "Architecture generation complete!";
+      await broadcastStatus("complete", completionMsg);
+      await broadcastChatMessage(completionMsg);
       await updatePresence(null, false);
 
       return {
@@ -453,6 +529,7 @@ export const designAgentTask = task({
       const errorMessage = error instanceof Error ? error.message : "Generation error";
       logger.error("Error executing design agent task", { error: errorMessage });
       await broadcastStatus("error", errorMessage);
+      await broadcastChatMessage(`Error generating architecture: ${errorMessage}`);
       await updatePresence(null, false);
 
       return {

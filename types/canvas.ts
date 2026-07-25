@@ -41,6 +41,7 @@ export const NODE_COLOR_PAIRS: NodeColorPair[] = [
   { id: "pink", label: "Storage Pink", bg: "#3F122B", text: "#F472B6" },
   { id: "yellow", label: "Warning Yellow", bg: "#3B2D08", text: "#FACC15" },
   { id: "cyan", label: "Cache Cyan", bg: "#0C374D", text: "#38BDF8" },
+  { id: "red", label: "Critical Red", bg: "#450A0A", text: "#F87171" },
 ];
 
 export type CanvasNode = Node<CanvasNodeData, CustomNodeTypes>;
