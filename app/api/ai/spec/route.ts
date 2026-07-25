@@ -15,10 +15,11 @@ const specRequestSchema = z.object({
         sender: z.string().optional(),
       })
     )
+    .max(100)
     .optional()
     .default([]),
-  nodes: z.array(z.record(z.string(), z.unknown())).optional().default([]),
-  edges: z.array(z.record(z.string(), z.unknown())).optional().default([]),
+  nodes: z.array(z.record(z.string(), z.unknown())).max(500).optional().default([]),
+  edges: z.array(z.record(z.string(), z.unknown())).max(500).optional().default([]),
 });
 
 export async function POST(req: Request) {

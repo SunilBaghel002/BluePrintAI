@@ -29,17 +29,12 @@ export function useRealtimeRun(
   const [error, setError] = React.useState<string | null>(null);
   const prevRunIdRef = React.useRef<string | null>(null);
 
-  React.useEffect(() => {
-    if (runId && runId !== prevRunIdRef.current) {
-      prevRunIdRef.current = runId;
-      setStatus("EXECUTING");
-      setError(null);
-    } else if (!runId) {
-      prevRunIdRef.current = null;
-      setStatus("IDLE");
-      setError(null);
-    }
-  }, [runId]);
+  // Derive/adjust state during render when runId changes
+  if (runId !== prevRunIdRef.current) {
+    prevRunIdRef.current = runId || null;
+    setStatus(runId ? "EXECUTING" : "IDLE");
+    setError(null);
+  }
 
   useEventListener(({ event }) => {
     if (!runId) return;

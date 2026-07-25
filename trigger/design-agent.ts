@@ -119,8 +119,17 @@ function synthesizeArchitecture(prompt: string) {
     p.includes("s3") ||
     p.includes("upload");
 
-  const wantsRed = p.includes("red");
-  const redPair = { color: "#450A0A", textColor: "#F87171" };
+  const COLOR_MAP: Record<string, { color: string; textColor: string }> = {
+    red: { color: "#450A0A", textColor: "#F87171" },
+    blue: { color: "#1E3A5F", textColor: "#60A5FA" },
+    green: { color: "#143823", textColor: "#4ADE80" },
+    purple: { color: "#2E1065", textColor: "#C084FC" },
+    yellow: { color: "#3B2D08", textColor: "#FACC15" },
+    pink: { color: "#3F122B", textColor: "#F472B6" },
+  };
+
+  const requestedColorKey = Object.keys(COLOR_MAP).find((cName) => p.includes(cName));
+  const colorPair = requestedColorKey ? COLOR_MAP[requestedColorKey] : null;
 
   const actions: z.infer<typeof actionSchema>[] = [];
 
@@ -134,8 +143,8 @@ function synthesizeArchitecture(prompt: string) {
     y: 100,
     width: 170,
     height: 70,
-    color: wantsRed ? redPair.color : "#1E3A5F",
-    textColor: wantsRed ? redPair.textColor : "#60A5FA",
+    color: colorPair ? colorPair.color : "#1E3A5F",
+    textColor: colorPair ? colorPair.textColor : "#60A5FA",
   });
 
   actions.push({
@@ -147,8 +156,8 @@ function synthesizeArchitecture(prompt: string) {
     y: 100,
     width: 150,
     height: 70,
-    color: "#3B2D08",
-    textColor: "#FACC15",
+    color: colorPair ? colorPair.color : "#3B2D08",
+    textColor: colorPair ? colorPair.textColor : "#FACC15",
   });
 
   actions.push({
@@ -171,8 +180,8 @@ function synthesizeArchitecture(prompt: string) {
     y: 280,
     width: 120,
     height: 120,
-    color: "#2E1065",
-    textColor: "#C084FC",
+    color: colorPair ? colorPair.color : "#2E1065",
+    textColor: colorPair ? colorPair.textColor : "#C084FC",
   });
   actions.push({
     action: "add_edge",
@@ -193,8 +202,8 @@ function synthesizeArchitecture(prompt: string) {
       y: 280,
       width: 160,
       height: 80,
-      color: wantsRed ? redPair.color : "#450A0A",
-      textColor: wantsRed ? redPair.textColor : "#F87171",
+      color: colorPair ? colorPair.color : "#450A0A",
+      textColor: colorPair ? colorPair.textColor : "#F87171",
     });
     actions.push({
       action: "add_edge",
@@ -214,8 +223,8 @@ function synthesizeArchitecture(prompt: string) {
       y: 280,
       width: 160,
       height: 100,
-      color: "#0C374D",
-      textColor: "#38BDF8",
+      color: colorPair ? colorPair.color : "#0C374D",
+      textColor: colorPair ? colorPair.textColor : "#38BDF8",
     });
     actions.push({
       action: "add_edge",
@@ -235,8 +244,8 @@ function synthesizeArchitecture(prompt: string) {
       y: 280,
       width: 160,
       height: 80,
-      color: wantsRed ? redPair.color : "#1E3A5F",
-      textColor: wantsRed ? redPair.textColor : "#60A5FA",
+      color: colorPair ? colorPair.color : "#1E3A5F",
+      textColor: colorPair ? colorPair.textColor : "#60A5FA",
     });
     actions.push({
       action: "add_edge",
@@ -258,13 +267,15 @@ function synthesizeArchitecture(prompt: string) {
       y: 280,
       width: 120,
       height: 120,
-      color: wantsRed ? redPair.color : "#0C374D",
-      textColor: wantsRed ? redPair.textColor : "#38BDF8",
+      color: colorPair ? colorPair.color : "#0C374D",
+      textColor: colorPair ? colorPair.textColor : "#38BDF8",
     });
+
+    const cacheSourceId = isRealtime ? `node_pubsub_${timestamp}` : `node_app_${timestamp}`;
     actions.push({
       action: "add_edge",
       id: `edge_app_cache_${timestamp}`,
-      source: `node_app_${timestamp}`,
+      source: cacheSourceId,
       target: `node_cache_${timestamp}`,
       label: "Cache Hits",
     });
@@ -281,8 +292,8 @@ function synthesizeArchitecture(prompt: string) {
       y: 280,
       width: 150,
       height: 80,
-      color: "#3F122B",
-      textColor: "#F472B6",
+      color: colorPair ? colorPair.color : "#3F122B",
+      textColor: colorPair ? colorPair.textColor : "#F472B6",
     });
     actions.push({
       action: "add_edge",
@@ -304,8 +315,8 @@ function synthesizeArchitecture(prompt: string) {
     y: 480,
     width: 150,
     height: 90,
-    color: "#143823",
-    textColor: "#4ADE80",
+    color: colorPair ? colorPair.color : "#143823",
+    textColor: colorPair ? colorPair.textColor : "#4ADE80",
   });
 
   if (isRealtime) {

@@ -59,6 +59,7 @@ export async function POST(req: Request) {
             runs: [handle.id],
           },
         },
+        expirationTime: "1h",
       });
     } catch (tokenErr) {
       console.warn("Could not generate public token for run:", tokenErr);

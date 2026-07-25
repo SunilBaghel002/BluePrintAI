@@ -13,7 +13,7 @@ const chatHistoryItemSchema = z.object({
 
 const nodeItemSchema = z
   .object({
-    id: z.string(),
+    id: z.string().optional(),
     label: z.string().optional(),
     shape: z.string().optional(),
     data: z.record(z.string(), z.unknown()).optional(),
@@ -22,9 +22,9 @@ const nodeItemSchema = z
 
 const edgeItemSchema = z
   .object({
-    id: z.string(),
-    source: z.string(),
-    target: z.string(),
+    id: z.string().optional(),
+    source: z.string().optional(),
+    target: z.string().optional(),
     label: z.string().optional(),
   })
   .passthrough();
@@ -153,17 +153,7 @@ export const generateSpecTask = task({
   id: "generate-spec",
   maxDuration: 3600,
   run: async (payload: GenerateSpecPayload) => {
-    const validatedPayload = generateSpecPayloadSchema.parse(payload);
-    const { roomId, projectId, chatHistory, nodes, edges } = validatedPayload;
-    const targetProjectId = projectId || roomId;
-
-    logger.info("Generate spec task started", {
-      roomId,
-      projectId: targetProjectId,
-      nodeCount: nodes.length,
-      edgeCount: edges.length,
-      chatCount: chatHistory.length,
-    });
+    let roomId = payload?.roomId || "unknown_room";
 
     const updatePresence = async (thinking: boolean) => {
       try {
@@ -202,6 +192,19 @@ export const generateSpecTask = task({
     };
 
     try {
+      const validatedPayload = generateSpecPayloadSchema.parse(payload);
+      const { projectId, chatHistory, nodes, edges } = validatedPayload;
+      roomId = validatedPayload.roomId;
+      const targetProjectId = projectId || roomId;
+
+      logger.info("Generate spec task started", {
+        roomId,
+        projectId: targetProjectId,
+        nodeCount: nodes.length,
+        edgeCount: edges.length,
+        chatCount: chatHistory.length,
+      });
+
       await updatePresence(true);
       await broadcastStatus("start", "Ghost AI is compiling technical architecture spec...");
 
