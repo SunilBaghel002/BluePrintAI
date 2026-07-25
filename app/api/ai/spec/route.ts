@@ -5,10 +5,20 @@ import { tasks, auth as triggerAuth } from "@trigger.dev/sdk/v3";
 import { checkProjectAccess } from "@/lib/project-access";
 import { createTaskRun } from "@/lib/db/task-runs";
 
-const designRequestSchema = z.object({
-  prompt: z.string().min(1, "Prompt is required"),
+const specRequestSchema = z.object({
   roomId: z.string().min(1, "Room ID is required"),
-  projectId: z.string().optional(),
+  chatHistory: z
+    .array(
+      z.object({
+        role: z.enum(["user", "assistant"]),
+        content: z.string(),
+        sender: z.string().optional(),
+      })
+    )
+    .optional()
+    .default([]),
+  nodes: z.array(z.record(z.string(), z.unknown())).optional().default([]),
+  edges: z.array(z.record(z.string(), z.unknown())).optional().default([]),
 });
 
 export async function POST(req: Request) {
@@ -19,7 +29,7 @@ export async function POST(req: Request) {
 
   try {
     const body = await req.json();
-    const validation = designRequestSchema.safeParse(body);
+    const validation = specRequestSchema.safeParse(body);
 
     if (!validation.success) {
       return NextResponse.json(
@@ -28,29 +38,36 @@ export async function POST(req: Request) {
       );
     }
 
-    const { prompt, roomId, projectId } = validation.data;
-    const targetProjectId = projectId || roomId;
+    const { roomId, chatHistory, nodes, edges } = validation.data;
 
+    // Resolve project access strictly from authenticated user + roomId
     const access = await checkProjectAccess(roomId);
-    if (!access.hasAccess) {
+    if (!access.hasAccess || !access.project) {
       return NextResponse.json(
         { error: "Forbidden: No access to this project" },
         { status: 403 }
       );
     }
 
-    const handle = await tasks.trigger("design-agent", {
-      prompt,
+    const targetProjectId = access.project.id;
+
+    // Trigger generate-spec background task
+    const handle = await tasks.trigger("generate-spec", {
       roomId,
       projectId: targetProjectId,
+      chatHistory,
+      nodes,
+      edges,
     });
 
+    // Save TaskRun for ownership and authorization
     await createTaskRun({
       runId: handle.id,
       projectId: targetProjectId,
       userId,
     });
 
+    // Issue scoped Trigger.dev public access token
     let publicToken: string | undefined;
     try {
       publicToken = await triggerAuth.createPublicToken({
@@ -59,14 +76,15 @@ export async function POST(req: Request) {
             runs: [handle.id],
           },
         },
+        expirationTime: "1h",
       });
     } catch (tokenErr) {
-      console.warn("Could not generate public token for run:", tokenErr);
+      console.warn("Could not generate public token for spec run:", tokenErr);
     }
 
     return NextResponse.json({ runId: handle.id, publicToken });
   } catch (error) {
-    console.error("Error triggering design task:", error);
+    console.error("Error triggering spec generation task:", error);
     const errorMessage =
       error instanceof Error ? error.message : "Internal server error";
     return NextResponse.json({ error: errorMessage }, { status: 500 });

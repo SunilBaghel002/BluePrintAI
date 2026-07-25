@@ -13,11 +13,12 @@ import {
   Loader2,
   AlertCircle,
 } from "lucide-react";
-import { useEventListener, useBroadcastEvent } from "@liveblocks/react";
+import { useEventListener, useBroadcastEvent, useRoom } from "@liveblocks/react";
 import { useUser } from "@clerk/nextjs";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
+import { useRealtimeRun } from "@/hooks/use-realtime-run";
 import {
   aiStatusPayloadSchema,
   aiChatMessageSchema,
@@ -39,12 +40,20 @@ const STARTER_CHIPS = [
 
 export function AiSidebar({ isOpen, onClose }: AiSidebarProps) {
   const { user } = useUser();
+  const room = useRoom();
   const broadcast = useBroadcastEvent();
 
   const [chatMessages, setChatMessages] = React.useState<AiChatMessage[]>([]);
   const [inputText, setInputText] = React.useState("");
   const [sendError, setSendError] = React.useState<string | null>(null);
   const [latestStatus, setLatestStatus] = React.useState<AiStatusPayload | null>(null);
+  const [activeRunId, setActiveRunId] = React.useState<string | null>(null);
+  const [publicToken, setPublicToken] = React.useState<string | null>(null);
+
+  // Realtime run tracking via Trigger.dev publicToken & Liveblocks
+  const { isCompleted, isLoading: isRunLoading } = useRealtimeRun(activeRunId, {
+    accessToken: publicToken,
+  });
 
   // Subscribe to real-time broadcast events on status and chat feeds
   useEventListener(({ event }) => {
@@ -66,15 +75,55 @@ export function AiSidebar({ isOpen, onClose }: AiSidebarProps) {
     }
   });
 
-  if (!isOpen) return null;
-
   const isAiGenerating = latestStatus
     ? AI_GENERATING_STATUSES.includes(latestStatus.status)
     : false;
 
-  const handleSendText = (textToSend: string) => {
+  const isRunActive = isRunLoading || isAiGenerating;
+
+  // Handle run completion and broadcast final AI response message
+  const hasHandledCompletionRef = React.useRef(false);
+  React.useEffect(() => {
+    if (isCompleted && activeRunId && !hasHandledCompletionRef.current) {
+      hasHandledCompletionRef.current = true;
+      const finalContent =
+        latestStatus?.text || latestStatus?.message || "Architecture design complete! I've updated the canvas.";
+
+      const aiResponseMsg: AiChatMessage = {
+        type: "AI_CHAT",
+        id: `msg_ai_${Date.now()}`,
+        sender: "Ghost AI",
+        senderId: "ghost-ai",
+        role: "assistant",
+        content: finalContent,
+        timestamp: Date.now(),
+      };
+
+      // Broadcast to other clients
+      broadcast(aiResponseMsg);
+
+      // Append to local state so sender UI renders the AI response immediately
+      setChatMessages((prev) => {
+        if (prev.some((m) => m.id === aiResponseMsg.id)) return prev;
+        return [...prev, aiResponseMsg].sort((a, b) => a.timestamp - b.timestamp);
+      });
+
+      setActiveRunId(null);
+      setPublicToken(null);
+    }
+  }, [isCompleted, activeRunId, latestStatus, broadcast]);
+
+  React.useEffect(() => {
+    if (activeRunId) {
+      hasHandledCompletionRef.current = false;
+    }
+  }, [activeRunId]);
+
+  if (!isOpen) return null;
+
+  const handleSendText = async (textToSend: string) => {
     const trimmed = textToSend.trim();
-    if (!trimmed || isAiGenerating) return;
+    if (!trimmed || isRunActive) return;
 
     const messageId = `msg_${Date.now()}_${Math.random().toString(36).substring(2, 7)}`;
     const senderName = user?.fullName || user?.firstName || "Collaborator";
@@ -91,19 +140,57 @@ export function AiSidebar({ isOpen, onClose }: AiSidebarProps) {
 
     try {
       setSendError(null);
-      // Broadcast to room chat feed
+      // 1. Broadcast user message to room chat feed
       broadcast(newMsg);
 
-      // Optimistically append locally if not already present
+      // Optimistically append locally
       setChatMessages((prev) => {
         if (prev.some((m) => m.id === newMsg.id)) return prev;
         return [...prev, newMsg].sort((a, b) => a.timestamp - b.timestamp);
       });
 
       setInputText("");
-    } catch (err) {
-      console.error("Failed to broadcast chat message:", err);
-      setSendError("Failed to send message to room chat.");
+
+      // 2. Submit prompt to AI design API
+      const response = await fetch("/api/ai/design", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ prompt: trimmed, roomId: room.id }),
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({}));
+        throw new Error(errorData.error || "Failed to trigger AI design agent.");
+      }
+
+      const data = await response.json();
+      if (data.runId) {
+        setActiveRunId(data.runId);
+        if (data.publicToken) {
+          setPublicToken(data.publicToken);
+        }
+      }
+    } catch (err: unknown) {
+      const errorMessage =
+        err instanceof Error ? err.message : "Failed to send prompt to Ghost AI.";
+      console.error("AI prompt submission error:", err);
+      setSendError(errorMessage);
+
+      // Broadcast error message to room chat & append locally
+      const errorMsg: AiChatMessage = {
+        type: "AI_CHAT",
+        id: `msg_err_${Date.now()}`,
+        sender: "Ghost AI",
+        senderId: "ghost-ai",
+        role: "assistant",
+        content: `Error: ${errorMessage}`,
+        timestamp: Date.now(),
+      };
+      broadcast(errorMsg);
+      setChatMessages((prev) => {
+        if (prev.some((m) => m.id === errorMsg.id)) return prev;
+        return [...prev, errorMsg].sort((a, b) => a.timestamp - b.timestamp);
+      });
     }
   };
 
@@ -112,7 +199,7 @@ export function AiSidebar({ isOpen, onClose }: AiSidebarProps) {
   };
 
   const handleSelectChip = (chipText: string) => {
-    if (isAiGenerating) return;
+    if (isRunActive) return;
     handleSendText(chipText);
   };
 
@@ -132,10 +219,10 @@ export function AiSidebar({ isOpen, onClose }: AiSidebarProps) {
         <div className="flex items-center gap-2.5">
           <div className="flex h-7 w-7 items-center justify-center rounded-lg bg-brand-dim text-accent-text relative">
             <Bot className="h-4 w-4 stroke-[1.5]" />
-            {isAiGenerating && (
+            {isRunActive && (
               <span className="absolute -top-0.5 -right-0.5 flex h-2 w-2">
-                <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-purple-400 opacity-75"></span>
-                <span className="relative inline-flex rounded-full h-2 w-2 bg-purple-500"></span>
+                <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
+                <span className="relative inline-flex rounded-full h-2 w-2 bg-[#62C073]"></span>
               </span>
             )}
           </div>
@@ -158,30 +245,6 @@ export function AiSidebar({ isOpen, onClose }: AiSidebarProps) {
           <X className="h-4 w-4 stroke-[1.5]" />
         </Button>
       </div>
-
-      {/* Shared AI Status Feed Banner */}
-      {latestStatus && displayMessageText && (
-        <div
-          className={`mt-2 px-3 py-2 rounded-xl text-xs flex items-center gap-2 transition-all shrink-0 ${
-            isAiGenerating
-              ? "bg-purple-950/40 border border-purple-800/50 text-purple-200"
-              : latestStatus.status === "error"
-              ? "bg-red-950/40 border border-red-800/50 text-red-200"
-              : "bg-emerald-950/40 border border-emerald-800/50 text-emerald-200"
-          }`}
-        >
-          {isAiGenerating ? (
-            <Loader2 className="h-3.5 w-3.5 animate-spin text-purple-400 shrink-0 stroke-[2]" />
-          ) : latestStatus.status === "error" ? (
-            <span className="h-2 w-2 rounded-full bg-red-500 shrink-0" />
-          ) : (
-            <span className="h-2 w-2 rounded-full bg-emerald-400 shrink-0" />
-          )}
-          <span className="truncate text-[11px] font-medium leading-tight">
-            {displayMessageText}
-          </span>
-        </div>
-      )}
 
       {/* Tabs Layout */}
       <Tabs defaultValue="architect" className="flex-1 flex flex-col mt-3 overflow-hidden">
@@ -229,12 +292,12 @@ export function AiSidebar({ isOpen, onClose }: AiSidebarProps) {
                     <button
                       key={idx}
                       type="button"
-                      disabled={isAiGenerating}
+                      disabled={isRunActive}
                       onClick={() => handleSelectChip(chip)}
-                      className="w-full text-left text-xs bg-elevated border border-surface-border hover:border-accent/50 text-accent-text hover:text-primary-text rounded-xl px-3 py-2 transition-all flex items-center justify-between group disabled:opacity-50 disabled:pointer-events-none"
+                      className="w-full text-left text-xs bg-elevated border border-surface-border hover:border-[#62C073]/50 text-[#62C073] hover:text-white rounded-xl px-3 py-2 transition-all flex items-center justify-between group disabled:opacity-50 disabled:pointer-events-none"
                     >
                       <span className="truncate">{chip}</span>
-                      <ArrowRight className="h-3 w-3 text-muted-text group-hover:text-accent-text shrink-0 stroke-[1.5]" />
+                      <ArrowRight className="h-3 w-3 text-muted-text group-hover:text-[#62C073] shrink-0 stroke-[1.5]" />
                     </button>
                   ))}
                 </div>
@@ -263,8 +326,8 @@ export function AiSidebar({ isOpen, onClose }: AiSidebarProps) {
                       <div
                         className={`rounded-2xl p-3 text-xs leading-relaxed max-w-[90%] shadow-sm ${
                           isSelf
-                            ? "bg-brand-dim/70 border border-accent/50 text-primary-text rounded-tr-sm"
-                            : "bg-elevated border border-surface-border text-primary-text rounded-tl-sm"
+                            ? "bg-[#62C073] text-[#0A0A0C] font-medium rounded-tr-sm"
+                            : "bg-[#18181B] border border-[#27272A] text-primary-text rounded-tl-sm"
                         }`}
                       >
                         {msg.content}
@@ -276,6 +339,16 @@ export function AiSidebar({ isOpen, onClose }: AiSidebarProps) {
             )}
           </div>
 
+          {/* Compact Run Status Strip (Above Input - Visible ONLY during active run) */}
+          {isRunActive && displayMessageText && (
+            <div className="mt-2 px-3 py-1.5 rounded-xl text-xs flex items-center gap-2 transition-all shrink-0 bg-[#121215] border border-[#62C073]/30 text-[#62C073]">
+              <Loader2 className="h-3.5 w-3.5 animate-spin text-[#62C073] shrink-0 stroke-[2]" />
+              <span className="truncate text-[11px] font-medium leading-tight">
+                {displayMessageText}
+              </span>
+            </div>
+          )}
+
           {/* Input Composer Area */}
           <div className="shrink-0 pt-3 border-t border-surface-border space-y-2">
             {sendError && (
@@ -285,14 +358,14 @@ export function AiSidebar({ isOpen, onClose }: AiSidebarProps) {
               </div>
             )}
 
-            <div className="relative rounded-xl border border-surface-border bg-elevated p-2.5 focus-within:border-accent/60 transition-colors">
+            <div className="relative rounded-xl border border-surface-border bg-elevated p-2.5 focus-within:border-[#62C073]/60 transition-colors">
               <Textarea
                 value={inputText}
                 onChange={(e) => setInputText(e.target.value)}
                 onKeyDown={handleKeyDown}
-                disabled={isAiGenerating}
+                disabled={isRunActive}
                 placeholder={
-                  isAiGenerating
+                  isRunActive
                     ? "Ghost AI is generating architecture..."
                     : "Describe system architecture or prompt Ghost AI..."
                 }
@@ -300,7 +373,7 @@ export function AiSidebar({ isOpen, onClose }: AiSidebarProps) {
               />
               <div className="flex items-center justify-between pt-2">
                 <span className="text-[10px] text-muted-text">
-                  {isAiGenerating
+                  {isRunActive
                     ? "Generation active..."
                     : "Enter to send, Shift+Enter newline"}
                 </span>
@@ -308,15 +381,15 @@ export function AiSidebar({ isOpen, onClose }: AiSidebarProps) {
                   type="button"
                   size="sm"
                   onClick={handleSend}
-                  disabled={isAiGenerating || !inputText.trim()}
-                  className="h-7 px-3 bg-accent text-white hover:bg-accent/90 font-medium text-xs rounded-lg transition-colors flex items-center gap-1.5 disabled:opacity-40"
+                  disabled={isRunActive || !inputText.trim()}
+                  className="h-7 px-3 bg-[#62C073] hover:bg-[#52B063] text-[#0A0A0C] font-semibold text-xs rounded-lg transition-colors flex items-center gap-1.5 disabled:opacity-40"
                 >
-                  {isAiGenerating ? (
-                    <Loader2 className="h-3 w-3 animate-spin stroke-[1.5]" />
+                  {isRunActive ? (
+                    <Loader2 className="h-3 w-3 animate-spin stroke-[2] text-[#0A0A0C]" />
                   ) : (
-                    <Send className="h-3 w-3 stroke-[1.5]" />
+                    <Send className="h-3 w-3 stroke-[2] text-[#0A0A0C]" />
                   )}
-                  {isAiGenerating ? "Generating..." : "Send"}
+                  {isRunActive ? "Running..." : "Send"}
                 </Button>
               </div>
             </div>
