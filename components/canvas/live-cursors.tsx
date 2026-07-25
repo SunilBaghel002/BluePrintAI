@@ -5,6 +5,8 @@ import { useOthers, useOther, shallow } from "@liveblocks/react";
 import { useViewport } from "@xyflow/react";
 import { useUser } from "@clerk/nextjs";
 
+import { Loader2 } from "lucide-react";
+
 function CursorPointer({ color }: { color: string }) {
   return (
     <svg
@@ -31,6 +33,7 @@ const IndividualLiveCursor = React.memo(function IndividualLiveCursor({
     (o) => ({
       id: o.id,
       cursor: o.presence?.cursor,
+      thinking: Boolean(o.presence?.thinking || o.presence?.isThinking),
       info: o.info,
     }),
     shallow
@@ -56,10 +59,13 @@ const IndividualLiveCursor = React.memo(function IndividualLiveCursor({
     >
       <CursorPointer color={color} />
       <div
-        className="ml-1 mt-3 rounded-md px-2 py-0.5 text-[11px] font-semibold text-white shadow-lg whitespace-nowrap"
+        className="ml-1 mt-3 rounded-md px-2 py-0.5 text-[11px] font-semibold text-white shadow-lg whitespace-nowrap flex items-center gap-1.5"
         style={{ backgroundColor: color }}
       >
-        {name}
+        {other.thinking && (
+          <Loader2 className="h-3 w-3 animate-spin text-white shrink-0 stroke-[2]" />
+        )}
+        <span>{name}</span>
       </div>
     </div>
   );

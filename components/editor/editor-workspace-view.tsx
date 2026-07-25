@@ -99,7 +99,13 @@ export function EditorWorkspaceView({
             onCloseTemplates={() => setIsTemplatesOpen(false)}
             onSaveStatusChange={setSaveStatus}
             onRegisterSaveHandler={handleRegisterSaveHandler}
-          />
+          >
+            {/* Right Floating AI Sidebar inside Liveblocks Room Context */}
+            <AiSidebar
+              isOpen={isAiSidebarOpen}
+              onClose={() => setIsAiSidebarOpen(false)}
+            />
+          </CanvasRoom>
         </main>
 
         {/* Left Floating Project Sidebar */}
@@ -113,12 +119,6 @@ export function EditorWorkspaceView({
           sharedProjects={sharedProjects}
           activeProjectId={roomId}
           onSelectProject={handleSelectProject}
-        />
-
-        {/* Right Floating AI Sidebar */}
-        <AiSidebar
-          isOpen={isAiSidebarOpen}
-          onClose={() => setIsAiSidebarOpen(false)}
         />
       </div>
 
