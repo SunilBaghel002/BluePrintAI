@@ -5,11 +5,13 @@ import { generateObject } from "ai";
 import { z } from "zod";
 import { liveblocks } from "../lib/liveblocks";
 
-export interface DesignAgentPayload {
-  prompt: string;
-  roomId: string;
-  projectId?: string;
-}
+export const designAgentPayloadSchema = z.object({
+  prompt: z.string().min(1, "Prompt is required"),
+  roomId: z.string().min(1, "Room ID is required"),
+  projectId: z.string().optional(),
+});
+
+export type DesignAgentPayload = z.infer<typeof designAgentPayloadSchema>;
 
 const nodeShapeSchema = z.enum([
   "rectangle",
@@ -300,8 +302,14 @@ export const designAgentTask = task({
   id: "design-agent",
   maxDuration: 3600,
   run: async (payload: DesignAgentPayload) => {
-    const { prompt, roomId } = payload;
-    logger.info("Design agent task started", { payload });
+    const validatedPayload = designAgentPayloadSchema.parse(payload);
+    const { prompt, roomId, projectId } = validatedPayload;
+
+    logger.info("Design agent task started", {
+      roomId,
+      projectId,
+      promptSnippet: prompt.slice(0, 30),
+    });
 
     const updatePresence = async (
       cursor: { x: number; y: number } | null,
@@ -354,39 +362,59 @@ export const designAgentTask = task({
       try {
         await broadcastStatus("processing", "Designing microservices and node layouts...");
         
-        let response;
         const openaiKey = process.env.OPENAI_API_KEY;
         const googleKey = process.env.GOOGLE_AI_API_KEY || process.env.GEMINI_API_KEY;
+        let generatedResult: { summary: string; actions: z.infer<typeof actionSchema>[] } | null = null;
 
         if (openaiKey) {
-          logger.info("Attempting AI generation with OpenAI gpt-4o...");
-          const openai = createOpenAI({ apiKey: openaiKey });
-          response = await generateObject({
-            model: (openai("gpt-4o") as unknown) as Parameters<typeof generateObject>[0]["model"],
-            schema: designOutputSchema,
-            system: SYSTEM_PROMPT,
-            prompt: `User Request: "${prompt}"\n\nGenerate an architecture diagram with structured node and edge actions.`,
-          });
-          logger.info("AI design generated via OpenAI gpt-4o", { summary: response.object.summary, actionCount: response.object.actions.length });
-        } else if (googleKey) {
+          try {
+            logger.info("Attempting AI generation with OpenAI gpt-4o...");
+            const openai = createOpenAI({ apiKey: openaiKey });
+            const response = await generateObject({
+              model: (openai("gpt-4o") as unknown) as Parameters<typeof generateObject>[0]["model"],
+              schema: designOutputSchema,
+              system: SYSTEM_PROMPT,
+              prompt: `User Request: "${prompt}"\n\nGenerate an architecture diagram with structured node and edge actions.`,
+              abortSignal: AbortSignal.timeout(30000),
+            });
+            generatedResult = response.object;
+            logger.info("AI design generated via OpenAI gpt-4o", {
+              summary: response.object.summary,
+              actionCount: response.object.actions.length,
+            });
+          } catch (openaiErr) {
+            logger.warn("OpenAI generation failed or timed out. Attempting Gemini retry if available.", {
+              error: openaiErr instanceof Error ? openaiErr.message : openaiErr,
+            });
+          }
+        }
+
+        if (!generatedResult && googleKey) {
           logger.info("Attempting AI generation with Gemini gemini-2.0-flash...");
           const google = createGoogleGenerativeAI({ apiKey: googleKey });
-          response = await generateObject({
+          const response = await generateObject({
             model: (google("gemini-2.0-flash") as unknown) as Parameters<typeof generateObject>[0]["model"],
             schema: designOutputSchema,
             system: SYSTEM_PROMPT,
             prompt: `User Request: "${prompt}"\n\nGenerate an architecture diagram with structured node and edge actions.`,
+            abortSignal: AbortSignal.timeout(30000),
           });
-          logger.info("AI design generated via Gemini", { summary: response.object.summary, actionCount: response.object.actions.length });
-        } else {
-          throw new Error("No AI API keys configured (neither OPENAI_API_KEY nor GOOGLE_AI_API_KEY found).");
+          generatedResult = response.object;
+          logger.info("AI design generated via Gemini", {
+            summary: response.object.summary,
+            actionCount: response.object.actions.length,
+          });
         }
 
-        summary = response.object.summary;
-        actions = response.object.actions;
-      } catch (aiErr: any) {
-        logger.warn("AI Provider call failed or quota/billing limit reached. Using architectural synthesis engine fallback.", {
-          error: aiErr?.message || aiErr,
+        if (!generatedResult) {
+          throw new Error("No AI provider succeeded or API keys missing.");
+        }
+
+        summary = generatedResult.summary;
+        actions = generatedResult.actions;
+      } catch (aiErr) {
+        logger.warn("AI Provider calls failed or quota/billing limit reached. Using architectural synthesis engine fallback.", {
+          error: aiErr instanceof Error ? aiErr.message : aiErr,
         });
         
         await broadcastStatus("processing", "Synthesizing architecture nodes and data flows...");
@@ -421,14 +449,15 @@ export const designAgentTask = task({
         summary,
         actionsCount: actions.length,
       };
-    } catch (error: any) {
-      logger.error("Error executing design agent task", { error: error?.message || error });
-      await broadcastStatus("error", error?.message || "Failed to generate architecture design.");
+    } catch (error) {
+      const errorMessage = error instanceof Error ? error.message : "Generation error";
+      logger.error("Error executing design agent task", { error: errorMessage });
+      await broadcastStatus("error", errorMessage);
       await updatePresence(null, false);
 
       return {
         success: false,
-        error: error?.message || "Generation error",
+        error: errorMessage,
       };
     }
   },

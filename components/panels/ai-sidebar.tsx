@@ -242,7 +242,9 @@ export function AiSidebar({ isOpen, onClose }: AiSidebarProps) {
             ) : (
               <div className="space-y-3">
                 {chatMessages.map((msg) => {
-                  const isSelf = user?.id && msg.senderId ? msg.senderId === user.id : msg.role === "user";
+                  const isSelf = Boolean(
+                    user?.id && msg.senderId && msg.senderId === user.id
+                  );
                   const formattedTime = new Date(msg.timestamp).toLocaleTimeString([], {
                     hour: "2-digit",
                     minute: "2-digit",
