@@ -17,7 +17,7 @@ import {
   type EdgeChange,
 } from "@xyflow/react";
 import { useLiveblocksFlow } from "@liveblocks/react-flow";
-import { useUpdateMyPresence, useRoom } from "@liveblocks/react";
+import { useUpdateMyPresence, useRoom, useEventListener } from "@liveblocks/react";
 import { useCanvasAutosave, SaveStatus } from "@/hooks/use-canvas-autosave";
 import {
   CANVAS_NODE_TYPE,
@@ -118,6 +118,106 @@ function BaseCanvasContent({
         initial: [],
       },
     });
+
+  useEventListener(({ event }: { event: any }) => {
+    if (event?.type === "AI_CANVAS_ACTIONS" && Array.isArray(event.actions)) {
+      const nodeChanges: NodeChange<CanvasNode>[] = [];
+      const edgeChanges: EdgeChange<CanvasEdge>[] = [];
+
+      for (const actionItem of event.actions) {
+        switch (actionItem.action) {
+          case "add_node": {
+            const newNode: CanvasNode = {
+              id: actionItem.id,
+              type: CANVAS_NODE_TYPE,
+              position: { x: actionItem.x, y: actionItem.y },
+              data: {
+                label: actionItem.label,
+                shape: actionItem.shape || "rectangle",
+                color: actionItem.color,
+                textColor: actionItem.textColor,
+              },
+              style: {
+                width: actionItem.width || 140,
+                height: actionItem.height || 80,
+              },
+            };
+            nodeChanges.push({ type: "add", item: newNode });
+            break;
+          }
+          case "move_node": {
+            nodeChanges.push({
+              type: "position",
+              id: actionItem.id,
+              position: { x: actionItem.x, y: actionItem.y },
+            });
+            break;
+          }
+          case "resize_node": {
+            nodeChanges.push({
+              type: "dimensions",
+              id: actionItem.id,
+              dimensions: { width: actionItem.width, height: actionItem.height },
+            });
+            break;
+          }
+          case "update_node": {
+            const targetNode = nodes.find((n) => n.id === actionItem.id);
+            if (targetNode) {
+              const updatedNode: CanvasNode = {
+                ...targetNode,
+                data: {
+                  ...targetNode.data,
+                  ...(actionItem.label !== undefined ? { label: actionItem.label } : {}),
+                  ...(actionItem.shape !== undefined ? { shape: actionItem.shape } : {}),
+                  ...(actionItem.color !== undefined ? { color: actionItem.color } : {}),
+                  ...(actionItem.textColor !== undefined ? { textColor: actionItem.textColor } : {}),
+                },
+              };
+              nodeChanges.push({ type: "replace", id: actionItem.id, item: updatedNode });
+            }
+            break;
+          }
+          case "delete_node": {
+            nodeChanges.push({ type: "remove", id: actionItem.id });
+            break;
+          }
+          case "add_edge": {
+            const newEdge: CanvasEdge = {
+              id: actionItem.id,
+              type: CANVAS_EDGE_TYPE,
+              source: actionItem.source,
+              target: actionItem.target,
+              label: actionItem.label,
+              markerEnd: {
+                type: MarkerType.ArrowClosed,
+                color: "#888892",
+                width: 14,
+                height: 14,
+              },
+            };
+            edgeChanges.push({ type: "add", item: newEdge });
+            break;
+          }
+          case "delete_edge": {
+            edgeChanges.push({ type: "remove", id: actionItem.id });
+            break;
+          }
+        }
+      }
+
+      if (nodeChanges.length > 0) {
+        onNodesChange(nodeChanges);
+      }
+      if (edgeChanges.length > 0) {
+        onEdgesChange(edgeChanges);
+      }
+
+      setTimeout(() => {
+        fitView({ duration: 400 });
+      }, 150);
+    }
+  });
 
   const [isInitialLoading, setIsInitialLoading] = React.useState(true);
 

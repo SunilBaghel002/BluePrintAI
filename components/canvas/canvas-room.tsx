@@ -17,6 +17,7 @@ interface CanvasRoomProps {
   onCloseTemplates?: () => void;
   onSaveStatusChange?: (status: SaveStatus) => void;
   onRegisterSaveHandler?: (saveFn: () => Promise<boolean>) => void;
+  children?: React.ReactNode;
 }
 
 class CanvasErrorBoundary extends React.Component<
@@ -64,6 +65,7 @@ export function CanvasRoom({
   onCloseTemplates = () => {},
   onSaveStatusChange,
   onRegisterSaveHandler,
+  children,
 }: CanvasRoomProps) {
   return (
     <CanvasErrorBoundary>
@@ -87,12 +89,15 @@ export function CanvasRoom({
             }
           >
             {() => (
-              <BaseCanvas
-                isTemplatesOpen={isTemplatesOpen}
-                onCloseTemplates={onCloseTemplates}
-                onSaveStatusChange={onSaveStatusChange}
-                onRegisterSaveHandler={onRegisterSaveHandler}
-              />
+              <>
+                <BaseCanvas
+                  isTemplatesOpen={isTemplatesOpen}
+                  onCloseTemplates={onCloseTemplates}
+                  onSaveStatusChange={onSaveStatusChange}
+                  onRegisterSaveHandler={onRegisterSaveHandler}
+                />
+                {children}
+              </>
             )}
           </ClientSideSuspense>
         </RoomProvider>

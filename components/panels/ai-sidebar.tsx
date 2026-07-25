@@ -10,19 +10,25 @@ import {
   FileCode,
   Download,
   ArrowRight,
+  Loader2,
+  AlertCircle,
 } from "lucide-react";
+import { useEventListener, useBroadcastEvent } from "@liveblocks/react";
+import { useUser } from "@clerk/nextjs";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
+import {
+  aiStatusPayloadSchema,
+  aiChatMessageSchema,
+  type AiStatusPayload,
+  type AiChatMessage,
+  AI_GENERATING_STATUSES,
+} from "@/types/tasks";
 
 interface AiSidebarProps {
   isOpen: boolean;
   onClose: () => void;
-}
-
-interface ChatMessage {
-  role: "user" | "assistant";
-  content: string;
 }
 
 const STARTER_CHIPS = [
@@ -32,28 +38,82 @@ const STARTER_CHIPS = [
 ];
 
 export function AiSidebar({ isOpen, onClose }: AiSidebarProps) {
-  const [messages, setMessages] = React.useState<ChatMessage[]>([]);
+  const { user } = useUser();
+  const broadcast = useBroadcastEvent();
+
+  const [chatMessages, setChatMessages] = React.useState<AiChatMessage[]>([]);
   const [inputText, setInputText] = React.useState("");
+  const [sendError, setSendError] = React.useState<string | null>(null);
+  const [latestStatus, setLatestStatus] = React.useState<AiStatusPayload | null>(null);
+
+  // Subscribe to real-time broadcast events on status and chat feeds
+  useEventListener(({ event }) => {
+    // 1. Validate AI status feed event
+    const statusParseResult = aiStatusPayloadSchema.safeParse(event);
+    if (statusParseResult.success) {
+      setLatestStatus(statusParseResult.data);
+      return;
+    }
+
+    // 2. Validate AI chat feed event
+    const chatParseResult = aiChatMessageSchema.safeParse(event);
+    if (chatParseResult.success) {
+      const validMsg = chatParseResult.data;
+      setChatMessages((prev) => {
+        if (prev.some((m) => m.id === validMsg.id)) return prev;
+        return [...prev, validMsg].sort((a, b) => a.timestamp - b.timestamp);
+      });
+    }
+  });
 
   if (!isOpen) return null;
 
-  const handleSend = () => {
-    const trimmed = inputText.trim();
-    if (!trimmed) return;
+  const isAiGenerating = latestStatus
+    ? AI_GENERATING_STATUSES.includes(latestStatus.status)
+    : false;
 
-    setMessages((prev) => [
-      ...prev,
-      { role: "user", content: trimmed },
-      {
-        role: "assistant",
-        content: `Got it! I am preparing an architecture schema for "${trimmed}". AI generation models will connect in Phase 5.`,
-      },
-    ]);
-    setInputText("");
+  const handleSendText = (textToSend: string) => {
+    const trimmed = textToSend.trim();
+    if (!trimmed || isAiGenerating) return;
+
+    const messageId = `msg_${Date.now()}_${Math.random().toString(36).substring(2, 7)}`;
+    const senderName = user?.fullName || user?.firstName || "Collaborator";
+
+    const newMsg: AiChatMessage = {
+      type: "AI_CHAT",
+      id: messageId,
+      sender: senderName,
+      senderId: user?.id,
+      role: "user",
+      content: trimmed,
+      timestamp: Date.now(),
+    };
+
+    try {
+      setSendError(null);
+      // Broadcast to room chat feed
+      broadcast(newMsg);
+
+      // Optimistically append locally if not already present
+      setChatMessages((prev) => {
+        if (prev.some((m) => m.id === newMsg.id)) return prev;
+        return [...prev, newMsg].sort((a, b) => a.timestamp - b.timestamp);
+      });
+
+      setInputText("");
+    } catch (err) {
+      console.error("Failed to broadcast chat message:", err);
+      setSendError("Failed to send message to room chat.");
+    }
+  };
+
+  const handleSend = () => {
+    handleSendText(inputText);
   };
 
   const handleSelectChip = (chipText: string) => {
-    setInputText(chipText);
+    if (isAiGenerating) return;
+    handleSendText(chipText);
   };
 
   const handleKeyDown = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
@@ -63,16 +123,24 @@ export function AiSidebar({ isOpen, onClose }: AiSidebarProps) {
     }
   };
 
+  const displayMessageText = latestStatus?.text || latestStatus?.message;
+
   return (
     <aside className="absolute right-3 top-3 bottom-3 z-30 w-[340px] rounded-2xl border border-surface-border bg-base/95 backdrop-blur-md p-4 flex flex-col shadow-2xl transition-all overflow-hidden select-none">
       {/* Header */}
       <div className="flex items-center justify-between pb-3 border-b border-surface-border shrink-0">
         <div className="flex items-center gap-2.5">
-          <div className="flex h-7 w-7 items-center justify-center rounded-lg bg-brand-dim text-accent-text">
+          <div className="flex h-7 w-7 items-center justify-center rounded-lg bg-brand-dim text-accent-text relative">
             <Bot className="h-4 w-4 stroke-[1.5]" />
+            {isAiGenerating && (
+              <span className="absolute -top-0.5 -right-0.5 flex h-2 w-2">
+                <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-purple-400 opacity-75"></span>
+                <span className="relative inline-flex rounded-full h-2 w-2 bg-purple-500"></span>
+              </span>
+            )}
           </div>
           <div className="flex flex-col">
-            <h3 className="text-xs font-semibold text-primary-text leading-none">
+            <h3 className="text-xs font-semibold text-primary-text leading-none flex items-center gap-1.5">
               AI Workspace
             </h3>
             <span className="text-[10px] text-muted-text leading-none mt-1">
@@ -90,6 +158,30 @@ export function AiSidebar({ isOpen, onClose }: AiSidebarProps) {
           <X className="h-4 w-4 stroke-[1.5]" />
         </Button>
       </div>
+
+      {/* Shared AI Status Feed Banner */}
+      {latestStatus && displayMessageText && (
+        <div
+          className={`mt-2 px-3 py-2 rounded-xl text-xs flex items-center gap-2 transition-all shrink-0 ${
+            isAiGenerating
+              ? "bg-purple-950/40 border border-purple-800/50 text-purple-200"
+              : latestStatus.status === "error"
+              ? "bg-red-950/40 border border-red-800/50 text-red-200"
+              : "bg-emerald-950/40 border border-emerald-800/50 text-emerald-200"
+          }`}
+        >
+          {isAiGenerating ? (
+            <Loader2 className="h-3.5 w-3.5 animate-spin text-purple-400 shrink-0 stroke-[2]" />
+          ) : latestStatus.status === "error" ? (
+            <span className="h-2 w-2 rounded-full bg-red-500 shrink-0" />
+          ) : (
+            <span className="h-2 w-2 rounded-full bg-emerald-400 shrink-0" />
+          )}
+          <span className="truncate text-[11px] font-medium leading-tight">
+            {displayMessageText}
+          </span>
+        </div>
+      )}
 
       {/* Tabs Layout */}
       <Tabs defaultValue="architect" className="flex-1 flex flex-col mt-3 overflow-hidden">
@@ -114,7 +206,7 @@ export function AiSidebar({ isOpen, onClose }: AiSidebarProps) {
         <TabsContent value="architect" className="flex-1 flex flex-col mt-3 outline-none overflow-hidden">
           {/* Scrollable Messages / Empty State Area */}
           <div className="flex-1 overflow-y-auto pr-1 space-y-3">
-            {messages.length === 0 ? (
+            {chatMessages.length === 0 ? (
               <div className="flex flex-col items-center justify-center text-center p-3 h-full my-auto space-y-3">
                 <div className="flex h-10 w-10 items-center justify-center rounded-2xl bg-brand-dim text-accent-text border border-accent/30 shadow-lg">
                   <Bot className="h-5 w-5 stroke-[1.5]" />
@@ -137,8 +229,9 @@ export function AiSidebar({ isOpen, onClose }: AiSidebarProps) {
                     <button
                       key={idx}
                       type="button"
+                      disabled={isAiGenerating}
                       onClick={() => handleSelectChip(chip)}
-                      className="w-full text-left text-xs bg-elevated border border-surface-border hover:border-accent/50 text-accent-text hover:text-primary-text rounded-xl px-3 py-2 transition-all flex items-center justify-between group"
+                      className="w-full text-left text-xs bg-elevated border border-surface-border hover:border-accent/50 text-accent-text hover:text-primary-text rounded-xl px-3 py-2 transition-all flex items-center justify-between group disabled:opacity-50 disabled:pointer-events-none"
                     >
                       <span className="truncate">{chip}</span>
                       <ArrowRight className="h-3 w-3 text-muted-text group-hover:text-accent-text shrink-0 stroke-[1.5]" />
@@ -148,54 +241,80 @@ export function AiSidebar({ isOpen, onClose }: AiSidebarProps) {
               </div>
             ) : (
               <div className="space-y-3">
-                {messages.map((msg, idx) => (
-                  <div
-                    key={idx}
-                    className={`flex flex-col ${
-                      msg.role === "user" ? "items-end" : "items-start"
-                    }`}
-                  >
+                {chatMessages.map((msg) => {
+                  const isSelf = user?.id && msg.senderId ? msg.senderId === user.id : msg.role === "user";
+                  const formattedTime = new Date(msg.timestamp).toLocaleTimeString([], {
+                    hour: "2-digit",
+                    minute: "2-digit",
+                  });
+
+                  return (
                     <div
-                      className={`rounded-2xl p-3 text-xs leading-relaxed max-w-[90%] shadow-sm ${
-                        msg.role === "user"
-                          ? "bg-brand-dim/70 border border-accent/50 text-primary-text rounded-tr-sm"
-                          : "bg-elevated border border-surface-border text-primary-text rounded-tl-sm"
-                      }`}
+                      key={msg.id}
+                      className={`flex flex-col ${isSelf ? "items-end" : "items-start"}`}
                     >
-                      {msg.content}
+                      <div className="flex items-center gap-1.5 mb-0.5 px-1 text-[10px] text-muted-text">
+                        <span className="font-medium text-primary-text/80">{msg.sender}</span>
+                        <span>•</span>
+                        <span>{formattedTime}</span>
+                      </div>
+                      <div
+                        className={`rounded-2xl p-3 text-xs leading-relaxed max-w-[90%] shadow-sm ${
+                          isSelf
+                            ? "bg-brand-dim/70 border border-accent/50 text-primary-text rounded-tr-sm"
+                            : "bg-elevated border border-surface-border text-primary-text rounded-tl-sm"
+                        }`}
+                      >
+                        {msg.content}
+                      </div>
                     </div>
-                    <span className="text-[10px] text-muted-text/80 mt-1 px-1">
-                      {msg.role === "user" ? "You" : "Ghost AI"}
-                    </span>
-                  </div>
-                ))}
+                  );
+                })}
               </div>
             )}
           </div>
 
           {/* Input Composer Area */}
           <div className="shrink-0 pt-3 border-t border-surface-border space-y-2">
+            {sendError && (
+              <div className="text-[10px] text-red-400 bg-red-950/30 border border-red-900/40 rounded-lg px-2.5 py-1 text-left flex items-center gap-1.5">
+                <AlertCircle className="h-3 w-3 shrink-0" />
+                <span>{sendError}</span>
+              </div>
+            )}
+
             <div className="relative rounded-xl border border-surface-border bg-elevated p-2.5 focus-within:border-accent/60 transition-colors">
               <Textarea
                 value={inputText}
                 onChange={(e) => setInputText(e.target.value)}
                 onKeyDown={handleKeyDown}
-                placeholder="Describe system architecture or prompt Ghost AI..."
-                className="w-full min-h-[72px] max-h-[140px] bg-transparent border-none text-xs text-primary-text placeholder:text-muted-text focus-visible:ring-0 resize-none p-0"
+                disabled={isAiGenerating}
+                placeholder={
+                  isAiGenerating
+                    ? "Ghost AI is generating architecture..."
+                    : "Describe system architecture or prompt Ghost AI..."
+                }
+                className="w-full min-h-[72px] max-h-[140px] bg-transparent border-none text-xs text-primary-text placeholder:text-muted-text focus-visible:ring-0 resize-none p-0 disabled:opacity-50"
               />
               <div className="flex items-center justify-between pt-2">
                 <span className="text-[10px] text-muted-text">
-                  Enter to send, Shift+Enter newline
+                  {isAiGenerating
+                    ? "Generation active..."
+                    : "Enter to send, Shift+Enter newline"}
                 </span>
                 <Button
                   type="button"
                   size="sm"
                   onClick={handleSend}
-                  disabled={!inputText.trim()}
+                  disabled={isAiGenerating || !inputText.trim()}
                   className="h-7 px-3 bg-accent text-white hover:bg-accent/90 font-medium text-xs rounded-lg transition-colors flex items-center gap-1.5 disabled:opacity-40"
                 >
-                  <Send className="h-3 w-3 stroke-[1.5]" />
-                  Send
+                  {isAiGenerating ? (
+                    <Loader2 className="h-3 w-3 animate-spin stroke-[1.5]" />
+                  ) : (
+                    <Send className="h-3 w-3 stroke-[1.5]" />
+                  )}
+                  {isAiGenerating ? "Generating..." : "Send"}
                 </Button>
               </div>
             </div>
