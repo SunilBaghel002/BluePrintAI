@@ -20,8 +20,20 @@ const createPrismaClient = (): PrismaClient => {
   return new PrismaClient({ adapter });
 };
 
-export const prisma = globalForPrisma.prisma ?? createPrismaClient();
+const getPrismaInstance = (): PrismaClient => {
+  const cached = globalForPrisma.prisma;
+  if (cached) {
+    if ("projectSpec" in cached) {
+      return cached;
+    }
+    // Drop cached Prisma clients generated before ProjectSpec model was added
+    (cached as unknown as { $disconnect?: () => Promise<void> }).$disconnect?.().catch(() => {});
+  }
+  const client = createPrismaClient();
+  if (process.env.NODE_ENV !== "production") {
+    globalForPrisma.prisma = client;
+  }
+  return client;
+};
 
-if (process.env.NODE_ENV !== "production") {
-  globalForPrisma.prisma = prisma;
-}
+export const prisma = getPrismaInstance();

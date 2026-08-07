@@ -18,6 +18,7 @@ import { useUser } from "@clerk/nextjs";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
+import { SpecPreviewModal } from "@/components/editor/spec-preview-modal";
 import { useRealtimeRun } from "@/hooks/use-realtime-run";
 import {
   aiStatusPayloadSchema,
@@ -26,6 +27,7 @@ import {
   type AiChatMessage,
   AI_GENERATING_STATUSES,
 } from "@/types/tasks";
+import { specListItemSchema, type SpecListItemParsed } from "@/lib/validations/spec-params";
 
 interface AiSidebarProps {
   isOpen: boolean;
@@ -49,6 +51,46 @@ export function AiSidebar({ isOpen, onClose }: AiSidebarProps) {
   const [latestStatus, setLatestStatus] = React.useState<AiStatusPayload | null>(null);
   const [activeRunId, setActiveRunId] = React.useState<string | null>(null);
   const [publicToken, setPublicToken] = React.useState<string | null>(null);
+
+  // Specs tab state
+  const [specs, setSpecs] = React.useState<SpecListItemParsed[]>([]);
+  const [isSpecsLoading, setIsSpecsLoading] = React.useState(false);
+  const [specsError, setSpecsError] = React.useState<string | null>(null);
+  const [isGeneratingSpec, setIsGeneratingSpec] = React.useState(false);
+  const [selectedSpecId, setSelectedSpecId] = React.useState<string | null>(null);
+  const [isPreviewModalOpen, setIsPreviewModalOpen] = React.useState(false);
+
+  const roomId = room?.id;
+
+  const fetchSpecs = React.useCallback(async () => {
+    if (!roomId) return;
+    try {
+      setIsSpecsLoading(true);
+      setSpecsError(null);
+      const res = await fetch(`/api/projects/${roomId}/specs`);
+      if (!res.ok) throw new Error("Failed to fetch specs");
+      const data = await res.json();
+      if (Array.isArray(data.specs)) {
+        const validSpecs: SpecListItemParsed[] = [];
+        for (const item of data.specs) {
+          const parsed = specListItemSchema.safeParse(item);
+          if (parsed.success) {
+            validSpecs.push(parsed.data);
+          }
+        }
+        setSpecs(validSpecs);
+      }
+    } catch (err: unknown) {
+      console.error("Specs list fetch error:", err);
+      setSpecsError(err instanceof Error ? err.message : "Error loading specs");
+    } finally {
+      setIsSpecsLoading(false);
+    }
+  }, [roomId]);
+
+  React.useEffect(() => {
+    fetchSpecs();
+  }, [fetchSpecs]);
 
   // Realtime run tracking via Trigger.dev publicToken & Liveblocks
   const { isCompleted, isLoading: isRunLoading } = useRealtimeRun(activeRunId, {
@@ -110,8 +152,43 @@ export function AiSidebar({ isOpen, onClose }: AiSidebarProps) {
 
       setActiveRunId(null);
       setPublicToken(null);
+      fetchSpecs();
     }
-  }, [isCompleted, activeRunId, latestStatus, broadcast]);
+  }, [isCompleted, activeRunId, latestStatus, broadcast, fetchSpecs]);
+
+  const handleGenerateSpec = async () => {
+    if (!room?.id || isGeneratingSpec || isRunActive) return;
+    try {
+      setIsGeneratingSpec(true);
+      setSendError(null);
+      const response = await fetch("/api/ai/spec", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          roomId: room.id,
+          chatHistory: chatMessages.slice(-20),
+        }),
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({}));
+        throw new Error(errorData.error || "Failed to trigger spec generation task.");
+      }
+
+      const data = await response.json();
+      if (data.runId) {
+        setActiveRunId(data.runId);
+        if (data.publicToken) {
+          setPublicToken(data.publicToken);
+        }
+      }
+    } catch (err: unknown) {
+      console.error("Spec generation error:", err);
+      setSendError(err instanceof Error ? err.message : "Failed to trigger spec generation.");
+    } finally {
+      setIsGeneratingSpec(false);
+    }
+  };
 
   React.useEffect(() => {
     if (activeRunId) {
@@ -401,54 +478,119 @@ export function AiSidebar({ isOpen, onClose }: AiSidebarProps) {
           <Button
             type="button"
             size="sm"
-            disabled
-            title="AI Spec Generation available in Phase 5"
-            className="w-full h-9 bg-accent/50 text-white/60 font-semibold text-xs rounded-xl flex items-center justify-center gap-2 shrink-0 cursor-not-allowed shadow-none"
+            onClick={handleGenerateSpec}
+            disabled={isRunActive || isGeneratingSpec}
+            title="Generate comprehensive Markdown technical specification"
+            className="w-full h-9 bg-accent hover:bg-accent-hover text-white font-semibold text-xs rounded-xl flex items-center justify-center gap-2 shrink-0 transition-colors shadow-md disabled:opacity-50"
           >
-            <Sparkles className="h-4 w-4 stroke-[1.5]" />
-            Generate Architecture Spec
+            {isGeneratingSpec ? (
+              <Loader2 className="h-4 w-4 animate-spin stroke-[2]" />
+            ) : (
+              <Sparkles className="h-4 w-4 stroke-[1.5]" />
+            )}
+            {isGeneratingSpec ? "Triggering Spec AI..." : "Generate Architecture Spec"}
           </Button>
 
-          {/* Demo Spec Card */}
-          <div className="rounded-xl border border-surface-border bg-elevated p-3.5 space-y-3">
-            <div className="flex items-start justify-between">
-              <div className="flex items-center gap-2">
-                <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-surface-border text-accent-text shrink-0">
-                  <FileCode className="h-4 w-4 stroke-[1.5]" />
-                </div>
-                <div>
-                  <h4 className="text-xs font-semibold text-primary-text">
-                    Architecture Spec v1.0
-                  </h4>
-                  <span className="text-[10px] text-muted-text block">
-                    Generated Draft
-                  </span>
-                </div>
+          {isSpecsLoading && specs.length === 0 ? (
+            <div className="flex flex-col items-center justify-center py-8 text-muted-text space-y-2">
+              <Loader2 className="h-5 w-5 animate-spin text-accent-primary" />
+              <span className="text-[11px] font-mono">Loading specs...</span>
+            </div>
+          ) : specsError ? (
+            <div className="text-[11px] text-red-400 bg-red-950/30 border border-red-900/40 rounded-xl p-3 text-center">
+              {specsError}
+            </div>
+          ) : specs.length === 0 ? (
+            <div className="rounded-xl border border-surface-border bg-elevated p-4 text-center space-y-2 my-auto">
+              <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-surface-border text-muted-text mx-auto">
+                <FileCode className="h-4 w-4 stroke-[1.5]" />
               </div>
-              <span className="text-[9px] font-mono font-semibold px-2 py-0.5 rounded bg-brand-dim text-accent-text">
-                DEMO
-              </span>
+              <h4 className="text-xs font-semibold text-primary-text">No Specs Generated Yet</h4>
+              <p className="text-[11px] text-muted-text leading-relaxed">
+                Click above to generate a comprehensive architectural specification document for this project.
+              </p>
             </div>
+          ) : (
+            <div className="space-y-2.5">
+              {specs.map((spec, index) => {
+                const formattedDate = new Date(spec.createdAt).toLocaleDateString("en-US", {
+                  timeZone: "UTC",
+                  month: "short",
+                  day: "numeric",
+                  year: "numeric",
+                  hour: "2-digit",
+                  minute: "2-digit",
+                });
+                const specTitle = `Architecture Spec v${specs.length - index}`;
 
-            <p className="text-[11px] text-muted-text leading-relaxed">
-              Complete high-level architectural document detailing API gateway routing, auth microservices, database schemas, and message queue event flows.
-            </p>
+                return (
+                  <div
+                    key={spec.id}
+                    role="button"
+                    tabIndex={0}
+                    aria-label={`Preview ${specTitle}`}
+                    onClick={() => {
+                      setSelectedSpecId(spec.id);
+                      setIsPreviewModalOpen(true);
+                    }}
+                    onKeyDown={(e) => {
+                      if (e.key === "Enter" || e.key === " ") {
+                        if (e.key === " ") e.preventDefault();
+                        setSelectedSpecId(spec.id);
+                        setIsPreviewModalOpen(true);
+                      }
+                    }}
+                    className="group rounded-xl border border-surface-border bg-elevated hover:border-accent-primary/60 p-3 transition-all cursor-pointer space-y-2 hover:shadow-lg focus:outline-none focus:ring-1 focus:ring-accent-primary"
+                  >
+                    <div className="flex items-start justify-between">
+                      <div className="flex items-center gap-2.5 min-w-0">
+                        <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-surface-border text-accent-text shrink-0 group-hover:bg-brand-dim transition-colors">
+                          <FileText className="h-4 w-4 stroke-[1.5]" />
+                        </div>
+                        <div className="min-w-0">
+                          <h4 className="text-xs font-semibold text-primary-text truncate group-hover:text-accent-text transition-colors">
+                            {specTitle}
+                          </h4>
+                          <span className="text-[10px] text-muted-text block truncate mt-0.5">
+                            {formattedDate}
+                          </span>
+                        </div>
+                      </div>
+                    </div>
 
-            <div className="pt-1 flex items-center justify-between border-t border-surface-border">
-              <span className="text-[10px] text-muted-text">PDF / Markdown</span>
-              <Button
-                type="button"
-                size="sm"
-                disabled
-                className="h-7 px-2.5 text-[11px] bg-surface-border text-muted-text cursor-not-allowed rounded-lg flex items-center gap-1"
-              >
-                <Download className="h-3 w-3 stroke-[1.5]" />
-                Download
-              </Button>
+                    <div className="pt-2 flex items-center justify-between border-t border-surface-border">
+                      <span className="text-[10px] text-muted-text font-mono">
+                        spec-{spec.id.substring(0, 8)}.md
+                      </span>
+                      <Button
+                        type="button"
+                        size="sm"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          if (!room?.id) return;
+                          window.open(`/api/projects/${room.id}/specs/${spec.id}/download`, "_blank");
+                        }}
+                        className="h-7 px-2.5 text-[11px] bg-surface-border hover:bg-accent-primary text-muted-text hover:text-white rounded-lg flex items-center gap-1 transition-colors"
+                      >
+                        <Download className="h-3 w-3 stroke-[1.5]" />
+                        Download
+                      </Button>
+                    </div>
+                  </div>
+                );
+              })}
             </div>
-          </div>
+          )}
         </TabsContent>
       </Tabs>
+
+      {/* Spec Preview Modal */}
+      <SpecPreviewModal
+        isOpen={isPreviewModalOpen}
+        onClose={() => setIsPreviewModalOpen(false)}
+        projectId={room?.id || ""}
+        specId={selectedSpecId}
+      />
     </aside>
   );
 }
