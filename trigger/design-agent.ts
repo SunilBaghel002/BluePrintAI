@@ -1,4 +1,4 @@
-import { task, logger } from "@trigger.dev/sdk/v3";
+import { task, logger } from "@trigger.dev/sdk";
 import { createGoogleGenerativeAI } from "@ai-sdk/google";
 import { createOpenAI } from "@ai-sdk/openai";
 import { generateObject } from "ai";
@@ -78,7 +78,7 @@ const designOutputSchema = z.object({
 });
 
 const SYSTEM_PROMPT = `
-You are Ghost AI, an expert system architect assistant for BlueprintAI.
+You are Blueprint AI, an expert system architect assistant.
 Your goal is to generate clean, visually balanced, professional SaaS architecture diagrams based on the user's prompt.
 
 Layout Guidelines:
@@ -413,8 +413,8 @@ export const designAgentTask = task({
         await liveblocks.broadcastEvent(roomId, {
           type: "AI_CHAT",
           id: `msg_ai_${Date.now()}`,
-          sender: "Ghost AI",
-          senderId: "ghost-ai",
+          sender: "Blueprint AI",
+          senderId: "blueprint-ai",
           role: "assistant",
           content,
           timestamp: Date.now(),
@@ -427,7 +427,7 @@ export const designAgentTask = task({
     try {
       // 1. Initial AI Presence & Status
       await updatePresence({ x: 300, y: 200 }, true);
-      await broadcastStatus("start", "Ghost AI is analyzing architecture requirements...");
+      await broadcastStatus("start", "Blueprint AI is analyzing architecture requirements...");
 
       let summary: string;
       let actions: z.infer<typeof actionSchema>[];

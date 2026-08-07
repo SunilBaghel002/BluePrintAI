@@ -1,303 +1,108 @@
+"use client";
+
 import * as React from "react";
-import { Sparkles, Users, FileCode2, Cpu, ArrowRight } from "lucide-react";
+import { BlueprintLogo } from "@/components/ui/blueprint-logo";
+import { AuthCanvasPreview } from "./auth-canvas-preview";
+import { Sparkles, Users, Cpu, CheckCircle, ShieldCheck } from "lucide-react";
 
 interface AuthLayoutShellProps {
   children: React.ReactNode;
 }
 
-const features = [
-  {
-    icon: Sparkles,
-    title: "AI Architecture Generation",
-    description:
-      "Describe your system, AI maps it to nodes and edges on a live canvas.",
-    accent: "var(--ai-primary)",
-    dimBg: "var(--ai-dim)",
-  },
-  {
-    icon: Users,
-    title: "Real-time Collaboration",
-    description:
-      "Live cursors, presence indicators, and shared node editing across your team.",
-    accent: "var(--accent-primary)",
-    dimBg: "var(--accent-dim)",
-  },
-  {
-    icon: FileCode2,
-    title: "Instant Spec Generation",
-    description:
-      "Export a complete Markdown technical spec directly from the canvas graph.",
-    accent: "var(--state-info)",
-    dimBg: "rgba(14, 165, 233, 0.12)",
-  },
-] as const;
-
 export function AuthLayoutShell({ children }: AuthLayoutShellProps) {
   return (
-    <div
-      style={{
-        display: "flex",
-        flexDirection: "row",
-        minHeight: "100vh",
-        width: "100%",
-      }}
-    >
-      {/* ── Left Panel ── */}
-      <div
-        style={{
-          width: "50%",
-          minHeight: "100vh",
-          display: "flex",
-          flexDirection: "column",
-          justifyContent: "space-between",
-          backgroundColor: "var(--bg-sidebar)",
-          borderRight: "1px solid var(--border-default)",
-          padding: "48px 56px",
-          flexShrink: 0,
-        }}
-      >
-        {/* Logo */}
-        <div style={{ display: "flex", alignItems: "center", gap: "12px" }}>
-          <div
-            style={{
-              display: "flex",
-              alignItems: "center",
-              justifyContent: "center",
-              width: "36px",
-              height: "36px",
-              borderRadius: "8px",
-              backgroundColor: "var(--accent-primary)",
-            }}
-          >
-            <Cpu
-              style={{ width: "20px", height: "20px", color: "#FFFFFF" }}
-              strokeWidth={1.5}
-            />
-          </div>
-          <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
-            <span
-              style={{
-                fontFamily: "var(--font-sans)",
-                fontSize: "18px",
-                fontWeight: 600,
-                color: "var(--text-primary)",
-                letterSpacing: "-0.02em",
-              }}
-            >
-              Blueprint
-            </span>
-            <span
-              style={{
-                fontFamily: "var(--font-mono)",
-                fontSize: "10px",
-                fontWeight: 500,
-                color: "var(--ai-primary)",
-                backgroundColor: "var(--ai-dim)",
-                border: "1px solid rgba(124, 58, 237, 0.3)",
-                borderRadius: "4px",
-                padding: "2px 6px",
-              }}
-            >
-              AI
-            </span>
+    <div className="flex flex-col lg:flex-row min-h-screen lg:h-screen lg:max-h-screen w-full bg-base text-text-primary overflow-y-auto lg:overflow-hidden">
+      {/* ── Left Showcase Panel (Desktop Showcase - Hidden on Mobile) ── */}
+      <div className="hidden lg:flex lg:w-1/2 h-full flex-col justify-between bg-sidebar border-r border-default p-6 xl:p-10 shrink-0 overflow-hidden">
+        {/* Top Header: Logo Mark */}
+        <div className="flex items-center justify-between shrink-0">
+          <BlueprintLogo size="md" />
+          <div className="flex items-center gap-2 bg-[#141418] border border-[#222226] rounded-full px-3 py-1 text-xs text-[#A0A0A0] shadow-sm">
+            <Sparkles className="h-3.5 w-3.5 text-[#C084FC]" />
+            <span>AI System Architecture Platform</span>
           </div>
         </div>
 
-        {/* Center: Headline + Features */}
-        <div
-          style={{
-            display: "flex",
-            flexDirection: "column",
-            gap: "40px",
-            maxWidth: "420px",
-          }}
-        >
-          {/* Tagline */}
+        {/* Center Showcase Section */}
+        <div className="flex flex-col gap-3 my-auto max-w-[580px] w-full">
+          {/* Main Headline */}
           <div>
-            <h1
-              style={{
-                fontFamily: "var(--font-sans)",
-                fontSize: "32px",
-                fontWeight: 700,
-                lineHeight: 1.15,
-                letterSpacing: "-0.03em",
-                color: "var(--text-primary)",
-                margin: 0,
-              }}
-            >
-              Design systems at the
-              <br />
-              speed of thought.
+            <h1 className="font-sans text-2xl xl:text-3xl font-bold tracking-tight text-[#F0F0F0] leading-snug">
+              Collaborative System Architecture <br />
+              <span className="text-transparent bg-clip-text bg-gradient-to-r from-[#60A5FA] via-[#38BDF8] to-[#C084FC]">
+                Powered by AI & Live Canvas
+              </span>
             </h1>
-            <p
-              style={{
-                fontFamily: "var(--font-sans)",
-                fontSize: "14px",
-                fontWeight: 400,
-                lineHeight: 1.6,
-                color: "var(--text-secondary)",
-                marginTop: "16px",
-                maxWidth: "380px",
-              }}
-            >
-              Describe your architecture in plain English. Blueprint AI maps it
-              to a shared canvas your whole team can refine in real time.
+            <p className="font-sans text-xs xl:text-sm text-[#A0A0A0] mt-2 leading-relaxed max-w-[520px]">
+              Describe your architecture in plain English. Blueprint AI maps it to a shared interactive canvas your team can refine in real time.
             </p>
           </div>
 
-          {/* Feature Cards */}
-          <div style={{ display: "flex", flexDirection: "column", gap: "16px" }}>
-            {features.map((feature) => (
-              <div
-                key={feature.title}
-                style={{
-                  display: "flex",
-                  alignItems: "flex-start",
-                  gap: "14px",
-                  padding: "14px 16px",
-                  backgroundColor: "var(--bg-surface)",
-                  border: "1px solid var(--border-default)",
-                  borderRadius: "8px",
-                  transition: "border-color 0.2s ease",
-                }}
-              >
-                <div
-                  style={{
-                    display: "flex",
-                    alignItems: "center",
-                    justifyContent: "center",
-                    width: "36px",
-                    height: "36px",
-                    borderRadius: "8px",
-                    backgroundColor: feature.dimBg,
-                    flexShrink: 0,
-                  }}
-                >
-                  <feature.icon
-                    style={{
-                      width: "18px",
-                      height: "18px",
-                      color: feature.accent,
-                    }}
-                    strokeWidth={1.5}
-                  />
-                </div>
-                <div>
-                  <h3
-                    style={{
-                      fontFamily: "var(--font-sans)",
-                      fontSize: "13px",
-                      fontWeight: 600,
-                      color: "var(--text-primary)",
-                      margin: 0,
-                      lineHeight: 1.3,
-                    }}
-                  >
-                    {feature.title}
-                  </h3>
-                  <p
-                    style={{
-                      fontFamily: "var(--font-sans)",
-                      fontSize: "12px",
-                      fontWeight: 400,
-                      color: "var(--text-secondary)",
-                      margin: "4px 0 0",
-                      lineHeight: 1.5,
-                    }}
-                  >
-                    {feature.description}
-                  </p>
-                </div>
+          {/* Real-time System Design Visual Canvas Showcase */}
+          <div className="w-full my-1">
+            <AuthCanvasPreview />
+          </div>
+
+          {/* Quick Value Highlights */}
+          <div className="grid grid-cols-3 gap-2.5 shrink-0">
+            <div className="bg-[#111115] border border-[#1E1E24] rounded-xl p-2.5 flex flex-col gap-0.5">
+              <div className="flex items-center gap-1.5 text-xs font-semibold text-[#60A5FA]">
+                <Cpu className="h-3.5 w-3.5" />
+                <span>AI Architect</span>
               </div>
-            ))}
-          </div>
+              <span className="text-[10px] text-[#888892]">GPT-4o diagrams</span>
+            </div>
 
-          {/* How it works */}
-          <div>
-            <p
-              style={{
-                fontFamily: "var(--font-sans)",
-                fontSize: "11px",
-                fontWeight: 500,
-                color: "var(--text-muted)",
-                textTransform: "uppercase",
-                letterSpacing: "0.06em",
-                marginBottom: "12px",
-              }}
-            >
-              How it works
-            </p>
-            <div
-              style={{
-                display: "flex",
-                alignItems: "center",
-                gap: "8px",
-                flexWrap: "wrap",
-              }}
-            >
-              {["Sign up", "Describe your system", "AI generates canvas", "Collaborate & export"].map(
-                (step, i) => (
-                  <React.Fragment key={step}>
-                    <span
-                      style={{
-                        fontFamily: "var(--font-sans)",
-                        fontSize: "12px",
-                        fontWeight: 500,
-                        color: "var(--text-secondary)",
-                        backgroundColor: "var(--bg-elevated)",
-                        border: "1px solid var(--border-default)",
-                        borderRadius: "6px",
-                        padding: "4px 10px",
-                        whiteSpace: "nowrap",
-                      }}
-                    >
-                      {step}
-                    </span>
-                    {i < 3 && (
-                      <ArrowRight
-                        style={{
-                          width: "12px",
-                          height: "12px",
-                          color: "var(--text-muted)",
-                          flexShrink: 0,
-                        }}
-                        strokeWidth={1.5}
-                      />
-                    )}
-                  </React.Fragment>
-                )
-              )}
+            <div className="bg-[#111115] border border-[#1E1E24] rounded-xl p-2.5 flex flex-col gap-0.5">
+              <div className="flex items-center gap-1.5 text-xs font-semibold text-[#34D399]">
+                <Users className="h-3.5 w-3.5" />
+                <span>Multiplayer</span>
+              </div>
+              <span className="text-[10px] text-[#888892]">Live cursors & sync</span>
+            </div>
+
+            <div className="bg-[#111115] border border-[#1E1E24] rounded-xl p-2.5 flex flex-col gap-0.5">
+              <div className="flex items-center gap-1.5 text-xs font-semibold text-[#C084FC]">
+                <CheckCircle className="h-3.5 w-3.5" />
+                <span>Exportable</span>
+              </div>
+              <span className="text-[10px] text-[#888892]">PNG & Specs</span>
             </div>
           </div>
         </div>
 
-        {/* Footer */}
-        <p
-          style={{
-            fontFamily: "var(--font-sans)",
-            fontSize: "12px",
-            fontWeight: 400,
-            color: "var(--text-muted)",
-            margin: 0,
-          }}
-        >
-          © {new Date().getFullYear()} Blueprint AI. All rights reserved.
-        </p>
+        {/* Left Footer */}
+        <div className="flex items-center justify-between pt-3 border-t border-[#1A1A1A] shrink-0">
+          <p className="font-sans text-[11px] text-[#555555]">
+            © {new Date().getFullYear()} Blueprint AI. All rights reserved.
+          </p>
+          <div className="flex items-center gap-3 text-[11px] text-[#555555]">
+            <span>Privacy</span>
+            <span>Terms</span>
+          </div>
+        </div>
       </div>
 
-      {/* ── Right Panel ── */}
-      <div
-        style={{
-          width: "50%",
-          minHeight: "100vh",
-          display: "flex",
-          alignItems: "center",
-          justifyContent: "center",
-          backgroundColor: "var(--bg-base)",
-          padding: "48px 32px",
-        }}
-      >
-        {children}
+      {/* ── Right Panel (Clerk Authentication Container) ── */}
+      <div className="relative w-full lg:w-1/2 min-h-screen lg:min-h-0 lg:h-full flex flex-col items-center justify-center bg-[#070709] p-4 sm:p-8 shrink-0 overflow-y-auto">
+        {/* Subtle Ambient Radial Glow */}
+        <div className="absolute inset-0 bg-[radial-gradient(circle_at_50%_50%,rgba(37,99,235,0.08),transparent_65%)] pointer-events-none" />
+
+        {/* Mobile Header Logo (Visible only on < lg screens) */}
+        <div className="flex lg:hidden items-center justify-center mb-6 z-10">
+          <BlueprintLogo size="md" />
+        </div>
+
+        {/* Clerk Sign In / Sign Up Form Slot */}
+        <div className="relative z-10 w-full max-w-[420px] flex flex-col items-center justify-center">
+          {children}
+        </div>
+
+        {/* Mobile Footer */}
+        <div className="flex lg:hidden items-center gap-2 mt-6 text-xs text-[#555555] z-10">
+          <ShieldCheck className="h-3.5 w-3.5 text-[#38BDF8]" />
+          <span>Secured by Clerk Authentication</span>
+        </div>
       </div>
     </div>
   );

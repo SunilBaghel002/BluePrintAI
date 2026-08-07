@@ -134,8 +134,8 @@ export function AiSidebar({ isOpen, onClose }: AiSidebarProps) {
       const aiResponseMsg: AiChatMessage = {
         type: "AI_CHAT",
         id: `msg_ai_${Date.now()}`,
-        sender: "Ghost AI",
-        senderId: "ghost-ai",
+        sender: "Blueprint AI",
+        senderId: "blueprint-ai",
         role: "assistant",
         content: finalContent,
         timestamp: Date.now(),
@@ -249,7 +249,7 @@ export function AiSidebar({ isOpen, onClose }: AiSidebarProps) {
       }
     } catch (err: unknown) {
       const errorMessage =
-        err instanceof Error ? err.message : "Failed to send prompt to Ghost AI.";
+        err instanceof Error ? err.message : "Failed to send prompt to Blueprint AI.";
       console.error("AI prompt submission error:", err);
       setSendError(errorMessage);
 
@@ -257,8 +257,8 @@ export function AiSidebar({ isOpen, onClose }: AiSidebarProps) {
       const errorMsg: AiChatMessage = {
         type: "AI_CHAT",
         id: `msg_err_${Date.now()}`,
-        sender: "Ghost AI",
-        senderId: "ghost-ai",
+        sender: "Blueprint AI",
+        senderId: "blueprint-ai",
         role: "assistant",
         content: `Error: ${errorMessage}`,
         timestamp: Date.now(),
@@ -308,7 +308,7 @@ export function AiSidebar({ isOpen, onClose }: AiSidebarProps) {
               AI Workspace
             </h3>
             <span className="text-[10px] text-muted-text leading-none mt-1">
-              Collaborate with Ghost AI
+              Collaborate with Blueprint AI
             </span>
           </div>
         </div>
@@ -443,8 +443,8 @@ export function AiSidebar({ isOpen, onClose }: AiSidebarProps) {
                 disabled={isRunActive}
                 placeholder={
                   isRunActive
-                    ? "Ghost AI is generating architecture..."
-                    : "Describe system architecture or prompt Ghost AI..."
+                    ? "Blueprint AI is generating architecture..."
+                    : "Describe system architecture or prompt Blueprint AI..."
                 }
                 className="w-full min-h-[72px] max-h-[140px] bg-transparent border-none text-xs text-primary-text placeholder:text-muted-text focus-visible:ring-0 resize-none p-0 disabled:opacity-50"
               />
