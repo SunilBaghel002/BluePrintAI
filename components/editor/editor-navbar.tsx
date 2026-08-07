@@ -13,6 +13,7 @@ import {
   AlertCircle,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { BlueprintLogo } from "@/components/ui/blueprint-logo";
 import { Show, SignInButton, SignUpButton, UserButton } from "@clerk/nextjs";
 import { SaveStatus } from "@/hooks/use-canvas-autosave";
 
@@ -57,20 +58,8 @@ export function EditorNavbar({
           </Button>
         )}
 
-        {/* Blueprint AI Brand Mark */}
-        <div className="flex items-center gap-2 select-none shrink-0">
-          <div className="flex h-7 w-7 items-center justify-center rounded-lg bg-[#2563EB] shadow-sm">
-            <Cpu className="h-4 w-4 text-white stroke-[1.5]" />
-          </div>
-          <div className="flex items-center gap-1.5">
-            <span className="text-xs font-bold tracking-tight text-[#F0F0F0]">
-              Blueprint
-            </span>
-            <span className="text-[10px] font-mono font-medium text-[#7C3AED] bg-[#2E1065] border border-[#7C3AED]/40 rounded px-1.5 py-0.5 leading-none">
-              AI
-            </span>
-          </div>
-        </div>
+        {/* Blueprint AI Brand Logo */}
+        <BlueprintLogo size="sm" />
 
         <span className="text-[#333338] text-xs font-mono select-none">/</span>
 
