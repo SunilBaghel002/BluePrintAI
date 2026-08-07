@@ -43,7 +43,7 @@ export const generateSpecPayloadSchema = z.object({
 export type GenerateSpecPayload = z.infer<typeof generateSpecPayloadSchema>;
 
 const SPEC_SYSTEM_PROMPT = `
-You are Ghost AI, an elite SaaS systems architect for BlueprintAI.
+You are Blueprint AI, an elite SaaS systems architect.
 Your goal is to generate a comprehensive, clear, professional Markdown Technical Specification document based on the provided architecture canvas nodes, edges, and user chat context.
 
 Required Markdown Structure:

@@ -134,8 +134,8 @@ export function AiSidebar({ isOpen, onClose }: AiSidebarProps) {
       const aiResponseMsg: AiChatMessage = {
         type: "AI_CHAT",
         id: `msg_ai_${Date.now()}`,
-        sender: "Ghost AI",
-        senderId: "ghost-ai",
+        sender: "Blueprint AI",
+        senderId: "blueprint-ai",
         role: "assistant",
         content: finalContent,
         timestamp: Date.now(),
@@ -308,7 +308,7 @@ export function AiSidebar({ isOpen, onClose }: AiSidebarProps) {
               AI Workspace
             </h3>
             <span className="text-[10px] text-muted-text leading-none mt-1">
-              Collaborate with Ghost AI
+              Collaborate with Blueprint AI
             </span>
           </div>
         </div>

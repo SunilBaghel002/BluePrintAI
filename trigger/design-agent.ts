@@ -78,7 +78,7 @@ const designOutputSchema = z.object({
 });
 
 const SYSTEM_PROMPT = `
-You are Ghost AI, an expert system architect assistant for BlueprintAI.
+You are Blueprint AI, an expert system architect assistant.
 Your goal is to generate clean, visually balanced, professional SaaS architecture diagrams based on the user's prompt.
 
 Layout Guidelines:
