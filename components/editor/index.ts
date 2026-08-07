@@ -11,6 +11,7 @@ export { ShareDialog } from "./share-dialog";
 export { StarterTemplatesModal } from "./starter-templates-modal";
 export { CANVAS_TEMPLATES, type CanvasTemplate } from "./starter-templates";
 export { useProjectActions } from "@/hooks/use-project-actions";
+export { SpecPreviewModal } from "./spec-preview-modal";
 
 
 
