@@ -33,7 +33,7 @@ export function BlueprintLogo({
     >
       {/* Custom Vector Blueprint Mark */}
       <div
-        className={`relative flex items-center justify-center ${currentSize.container} rounded-xl bg-gradient-to-br from-[#1E3A5F] via-[#0E1A2E] to-[#120B24] border border-[#2563EB]/30 shadow-[0_0_15px_rgba(37,99,235,0.2)] shrink-0 overflow-hidden group`}
+        className={`relative flex items-center justify-center ${currentSize.container} rounded-xl bg-gradient-to-br from-accent-dim via-[#0E1A2E] to-[#120B24] border border-accent-primary/30 shadow-[0_0_15px_rgba(37,99,235,0.2)] shrink-0 overflow-hidden group`}
       >
         {/* Subtle background glow */}
         <div className="absolute inset-0 bg-[radial-gradient(circle_at_30%_30%,rgba(37,99,235,0.3),transparent_70%)]" />

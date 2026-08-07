@@ -45,7 +45,7 @@ export function EditorNavbar({
   return (
     <header className="h-12 border-b border-[#1E1E24] bg-[#0E0E10] px-4 flex items-center justify-between shrink-0 z-40">
       {/* Left Section: Sidebar Toggle, Blueprint AI Brand Logo, & Project Breadcrumb */}
-      <div className="flex items-center gap-3">
+      <div className="flex items-center gap-2 sm:gap-3 min-w-0 shrink">
         {onToggleSidebar && (
           <Button
             variant="ghost"
@@ -59,50 +59,51 @@ export function EditorNavbar({
         )}
 
         {/* Blueprint AI Brand Logo */}
-        <BlueprintLogo size="sm" />
+        <BlueprintLogo size="sm" className="shrink-0" />
 
-        <span className="text-[#333338] text-xs font-mono select-none">/</span>
+        <span className="text-[#333338] text-xs font-mono select-none shrink-0">/</span>
 
         {/* Active Project Workspace Title */}
-        <div className="flex flex-col min-w-0">
-          <span className="text-xs font-semibold text-[#F0F0F0] leading-none truncate max-w-[180px] sm:max-w-[280px]">
+        <div className="flex flex-col min-w-0 truncate">
+          <span className="text-xs font-semibold text-[#F0F0F0] leading-none truncate max-w-[110px] sm:max-w-[280px]">
             {projectName}
           </span>
-          <span className="text-[10px] text-[#666670] leading-none mt-1">
+          <span className="text-[10px] text-[#666670] leading-none mt-1 hidden xs:inline">
             Workspace
           </span>
         </div>
       </div>
 
       {/* Right Section: Workspace Actions & User Auth */}
-      <div className="flex items-center gap-2">
+      <div className="flex items-center gap-1.5 sm:gap-2 shrink-0">
         {onSave && (
           <Button
             type="button"
             size="sm"
             onClick={onSave}
             disabled={saveStatus === "saving"}
-            className="h-8 px-3.5 rounded-full border border-[#27272A] bg-[#141418] text-xs font-medium text-[#F0F0F0] hover:bg-[#1E1E22] transition-colors flex items-center gap-1.5"
+            aria-label="Save canvas"
+            className="h-8 px-2 sm:px-3.5 rounded-full border border-[#27272A] bg-[#141418] text-xs font-medium text-[#F0F0F0] hover:bg-[#1E1E22] transition-colors flex items-center gap-1.5"
           >
             {saveStatus === "saving" ? (
               <>
                 <Loader2 className="h-3.5 w-3.5 text-[#14B8A6] animate-spin stroke-[1.5]" />
-                <span>Saving...</span>
+                <span className="hidden sm:inline">Saving...</span>
               </>
             ) : saveStatus === "saved" ? (
               <>
                 <Check className="h-3.5 w-3.5 text-emerald-400 stroke-[1.5]" />
-                <span className="text-emerald-400">Saved</span>
+                <span className="text-emerald-400 hidden sm:inline">Saved</span>
               </>
             ) : saveStatus === "error" ? (
               <>
                 <AlertCircle className="h-3.5 w-3.5 text-red-400 stroke-[1.5]" />
-                <span className="text-red-400">Save Error</span>
+                <span className="text-red-400 hidden sm:inline">Save Error</span>
               </>
             ) : (
               <>
                 <Save className="h-3.5 w-3.5 text-[#888892] stroke-[1.5]" />
-                <span>Save</span>
+                <span className="hidden sm:inline">Save</span>
               </>
             )}
           </Button>
@@ -113,10 +114,11 @@ export function EditorNavbar({
             type="button"
             size="sm"
             onClick={onOpenTemplates}
-            className="h-8 px-3.5 rounded-full border border-[#27272A] bg-[#141418] text-xs font-medium text-[#F0F0F0] hover:bg-[#1E1E22] transition-colors flex items-center gap-1.5"
+            aria-label="Templates gallery"
+            className="h-8 px-2 sm:px-3.5 rounded-full border border-[#27272A] bg-[#141418] text-xs font-medium text-[#F0F0F0] hover:bg-[#1E1E22] transition-colors flex items-center gap-1.5"
           >
             <LayoutTemplate className="h-3.5 w-3.5 text-[#888892] stroke-[1.5]" />
-            Templates
+            <span className="hidden sm:inline">Templates</span>
           </Button>
         )}
 
@@ -125,10 +127,11 @@ export function EditorNavbar({
             type="button"
             size="sm"
             onClick={onShare}
-            className="h-8 px-3.5 rounded-full border border-[#27272A] bg-[#141418] text-xs font-medium text-[#F0F0F0] hover:bg-[#1E1E22] transition-colors flex items-center gap-1.5"
+            aria-label="Share project"
+            className="h-8 px-2 sm:px-3.5 rounded-full border border-[#27272A] bg-[#141418] text-xs font-medium text-[#F0F0F0] hover:bg-[#1E1E22] transition-colors flex items-center gap-1.5"
           >
             <Share2 className="h-3.5 w-3.5 text-[#888892] stroke-[1.5]" />
-            Share
+            <span className="hidden sm:inline">Share</span>
           </Button>
         )}
 
@@ -138,10 +141,10 @@ export function EditorNavbar({
             size="sm"
             onClick={onToggleAiSidebar}
             aria-label={isAiSidebarOpen ? "Close AI Sidebar" : "Open AI Sidebar"}
-            className="h-8 px-3.5 rounded-full bg-[#14B8A6] text-black text-xs font-semibold hover:bg-[#14B8A6]/90 transition-colors flex items-center gap-1.5"
+            className="h-8 px-2.5 sm:px-3.5 rounded-full bg-[#14B8A6] text-black text-xs font-semibold hover:bg-[#14B8A6]/90 transition-colors flex items-center gap-1.5"
           >
             <Sparkles className="h-3.5 w-3.5 text-black stroke-[1.5]" />
-            AI
+            <span className="hidden sm:inline">AI</span>
           </Button>
         )}
 

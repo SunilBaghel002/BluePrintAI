@@ -30,12 +30,8 @@ export default function RootLayout({
     <html
       lang="en"
       className={`${geistSans.variable} ${geistMono.variable} dark h-full antialiased`}
-      style={{ backgroundColor: "#0A0A0A", color: "#F0F0F0" }}
     >
-      <body
-        className="min-h-full flex flex-col bg-[#0A0A0A] text-[#F0F0F0]"
-        style={{ backgroundColor: "#0A0A0A", color: "#F0F0F0" }}
-      >
+      <body className="min-h-full flex flex-col bg-base text-text-primary">
         <ClerkProvider
           signInUrl="/sign-in"
           signUpUrl="/sign-up"

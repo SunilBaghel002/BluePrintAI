@@ -11,9 +11,9 @@ interface AuthLayoutShellProps {
 
 export function AuthLayoutShell({ children }: AuthLayoutShellProps) {
   return (
-    <div className="flex flex-col lg:flex-row min-h-screen lg:h-screen lg:max-h-screen w-full bg-[#0A0A0A] text-[#F0F0F0] overflow-y-auto lg:overflow-hidden">
+    <div className="flex flex-col lg:flex-row min-h-screen lg:h-screen lg:max-h-screen w-full bg-base text-text-primary overflow-y-auto lg:overflow-hidden">
       {/* ── Left Showcase Panel (Desktop Showcase - Hidden on Mobile) ── */}
-      <div className="hidden lg:flex lg:w-1/2 h-full flex-col justify-between bg-[#0D0D0D] border-r border-[#1A1A1A] p-6 xl:p-10 shrink-0 overflow-hidden">
+      <div className="hidden lg:flex lg:w-1/2 h-full flex-col justify-between bg-sidebar border-r border-default p-6 xl:p-10 shrink-0 overflow-hidden">
         {/* Top Header: Logo Mark */}
         <div className="flex items-center justify-between shrink-0">
           <BlueprintLogo size="md" />

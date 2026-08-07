@@ -1,4 +1,4 @@
-import { task, logger } from "@trigger.dev/sdk/v3";
+import { task, logger } from "@trigger.dev/sdk";
 import { createGoogleGenerativeAI } from "@ai-sdk/google";
 import { createOpenAI } from "@ai-sdk/openai";
 import { generateText } from "ai";
@@ -215,7 +215,7 @@ export const generateSpecTask = task({
       });
 
       await updatePresence(true);
-      await broadcastStatus("start", "Ghost AI is compiling technical architecture spec...");
+      await broadcastStatus("start", "Blueprint AI is compiling technical architecture spec...");
 
       let markdownSpec = "";
       const googleKey = process.env.GOOGLE_AI_API_KEY || process.env.GEMINI_API_KEY;
