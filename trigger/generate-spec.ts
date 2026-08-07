@@ -6,6 +6,7 @@ import { z } from "zod";
 import { put } from "@vercel/blob";
 import { liveblocks } from "../lib/liveblocks";
 import { createProjectSpec } from "../lib/db/project-specs";
+import { getProjectById } from "../lib/db/projects";
 
 const chatHistoryItemSchema = z.object({
   role: z.enum(["user", "assistant"]),
@@ -197,7 +198,13 @@ export const generateSpecTask = task({
       const validatedPayload = generateSpecPayloadSchema.parse(payload);
       const { projectId, chatHistory, nodes, edges } = validatedPayload;
       roomId = validatedPayload.roomId;
-      const targetProjectId = projectId || roomId;
+      let targetProjectId = projectId;
+      if (!targetProjectId && roomId) {
+        const existingProject = await getProjectById(roomId);
+        if (existingProject) {
+          targetProjectId = existingProject.id;
+        }
+      }
 
       logger.info("Generate spec task started", {
         roomId,
@@ -274,6 +281,7 @@ Please generate a comprehensive, highly technical Markdown architectural specifi
 
       let specRecordId: string | undefined;
       let specBlobUrl: string | undefined;
+      let persistenceError: string | undefined;
 
       if (markdownSpec && targetProjectId) {
         try {
@@ -294,13 +302,18 @@ Please generate a comprehensive, highly technical Markdown architectural specifi
               blobUrl: blob.url,
             });
           } else {
+            persistenceError = "BLOB_READ_WRITE_TOKEN missing in environment";
             logger.warn("BLOB_READ_WRITE_TOKEN missing, skipped Vercel Blob persistence");
           }
         } catch (saveErr) {
+          persistenceError = saveErr instanceof Error ? saveErr.message : "Failed to save spec to storage";
           logger.error("Failed to save spec to Vercel Blob or DB", {
             error: saveErr instanceof Error ? saveErr.message : saveErr,
           });
         }
+      } else if (markdownSpec && !targetProjectId) {
+        persistenceError = "No valid Project ID found to associate with generated specification";
+        logger.warn(persistenceError);
       }
 
       const summary = `Generated Technical Spec v1.0 (${markdownSpec.length} bytes)`;
@@ -313,6 +326,7 @@ Please generate a comprehensive, highly technical Markdown architectural specifi
         spec: markdownSpec,
         specId: specRecordId,
         blobUrl: specBlobUrl,
+        persistenceError,
       };
     } catch (error) {
       const errorMessage = error instanceof Error ? error.message : "Spec generation error";

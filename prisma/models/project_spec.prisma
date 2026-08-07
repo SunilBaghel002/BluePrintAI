@@ -5,6 +5,5 @@ model ProjectSpec {
   filePath  String
   createdAt DateTime @default(now())
 
-  @@index([projectId])
-  @@index([createdAt])
+  @@index([projectId, createdAt(sort: Desc)])
 }

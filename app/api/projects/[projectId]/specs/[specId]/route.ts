@@ -2,6 +2,8 @@ import { NextResponse } from "next/server";
 import { auth } from "@clerk/nextjs/server";
 import { checkProjectAccess } from "@/lib/project-access";
 import { getProjectSpecById } from "@/lib/db/project-specs";
+import { fetchSpecContent } from "@/lib/spec-storage";
+import { specRouteParamsSchema } from "@/lib/validations/spec-params";
 
 interface RouteParams {
   params: Promise<{
@@ -11,69 +13,52 @@ interface RouteParams {
 }
 
 export async function GET(request: Request, { params }: RouteParams) {
-  const { projectId, specId } = await params;
+  // 1. Validate route params before auth, access check, or DB work
+  const rawParams = await params;
+  const paramValidation = specRouteParamsSchema.safeParse(rawParams);
+  if (!paramValidation.success || !paramValidation.data.specId) {
+    return NextResponse.json(
+      { error: "Invalid route parameters", details: paramValidation.error?.flatten() },
+      { status: 400 }
+    );
+  }
+  const { projectId, specId } = paramValidation.data as { projectId: string; specId: string };
 
-  // 1. Authenticate user
+  // 2. Authenticate user
   const { userId } = await auth();
   if (!userId) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
-  // 2. Verify project access
+  // 3. Verify project access
   const access = await checkProjectAccess(projectId);
   if (!access.hasAccess || !access.project) {
     return NextResponse.json({ error: "Forbidden: No access to this project" }, { status: 403 });
   }
 
-  // 3. Retrieve ProjectSpec record
-  const spec = await getProjectSpecById(specId);
+  // 4. Retrieve ProjectSpec scoped strictly to the authorized project
+  const spec = await getProjectSpecById(specId, access.project.id);
   if (!spec) {
     return NextResponse.json({ error: "Spec not found" }, { status: 404 });
   }
 
-  if (spec.projectId !== projectId && spec.projectId !== access.project.id) {
-    return NextResponse.json({ error: "Forbidden: Spec does not belong to this project" }, { status: 403 });
-  }
-
-  // 4. Fetch file content from Vercel Blob
-  const token = process.env.BLOB_READ_WRITE_TOKEN;
-  if (!token) {
-    console.error("BLOB_READ_WRITE_TOKEN is missing in environment variables");
-    return NextResponse.json(
-      { error: "Blob storage configuration error: BLOB_READ_WRITE_TOKEN missing" },
-      { status: 500 }
-    );
-  }
-
   try {
-    const blobResponse = await fetch(spec.filePath, {
-      headers: {
-        Authorization: `Bearer ${token}`,
-      },
-      cache: "no-store",
-      signal: AbortSignal.timeout(10000),
-    });
+    // 5. Fetch file content from Vercel Blob via shared helper
+    const content = await fetchSpecContent(spec.filePath);
 
-    if (!blobResponse.ok) {
-      console.error(
-        `Failed to fetch spec blob from URL: ${spec.filePath}, status: ${blobResponse.status}`
-      );
-      return NextResponse.json({ error: "Failed to fetch spec content from storage" }, { status: 500 });
-    }
-
-    const content = await blobResponse.text();
-
+    // 6. Return response object excluding filePath
     return NextResponse.json({
       spec: {
         id: spec.id,
         projectId: spec.projectId,
-        filePath: spec.filePath,
         createdAt: spec.createdAt.toISOString(),
         content,
       },
     });
   } catch (error) {
     console.error("Error fetching spec details:", error);
-    return NextResponse.json({ error: "Failed to fetch spec details" }, { status: 500 });
+    const errorMessage =
+      error instanceof Error ? error.message : "Failed to fetch spec details";
+    return NextResponse.json({ error: errorMessage }, { status: 500 });
   }
 }

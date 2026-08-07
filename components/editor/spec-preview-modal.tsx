@@ -11,6 +11,7 @@ import {
 } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { ScrollArea } from "@/components/ui/scroll-area";
+import { specDetailSchema, type SpecDetailParsed } from "@/lib/validations/spec-params";
 
 interface SpecPreviewModalProps {
   isOpen: boolean;
@@ -20,14 +21,6 @@ interface SpecPreviewModalProps {
   specDate?: string;
 }
 
-interface SpecDetail {
-  id: string;
-  projectId: string;
-  filePath: string;
-  createdAt: string;
-  content: string;
-}
-
 export function SpecPreviewModal({
   isOpen,
   onClose,
@@ -35,7 +28,7 @@ export function SpecPreviewModal({
   specId,
   specDate,
 }: SpecPreviewModalProps) {
-  const [specDetail, setSpecDetail] = React.useState<SpecDetail | null>(null);
+  const [specDetail, setSpecDetail] = React.useState<SpecDetailParsed | null>(null);
   const [isLoading, setIsLoading] = React.useState(false);
   const [error, setError] = React.useState<string | null>(null);
 
@@ -47,10 +40,13 @@ export function SpecPreviewModal({
     }
 
     let isMounted = true;
+    const controller = new AbortController();
     setIsLoading(true);
     setError(null);
 
-    fetch(`/api/projects/${projectId}/specs/${specId}`)
+    fetch(`/api/projects/${projectId}/specs/${specId}`, {
+      signal: controller.signal,
+    })
       .then((res) => {
         if (!res.ok) {
           throw new Error(`Failed to load spec content (Status ${res.status})`);
@@ -58,18 +54,27 @@ export function SpecPreviewModal({
         return res.json();
       })
       .then((data) => {
-        if (isMounted) {
-          if (data.spec) {
-            setSpecDetail(data.spec);
+        if (!isMounted) return;
+        if (data.spec) {
+          const parseResult = specDetailSchema.safeParse(data.spec);
+          if (parseResult.success) {
+            setSpecDetail(parseResult.data);
           } else {
-            setError(data.error || "Spec not found");
+            console.error("Spec detail schema validation failed:", parseResult.error);
+            setError("Received invalid specification data shape from server");
           }
+        } else {
+          setError(data.error || "Spec not found");
         }
       })
-      .catch((err) => {
-        if (isMounted) {
-          setError(err.message || "Failed to load specification document");
+      .catch((err: unknown) => {
+        if (!isMounted) return;
+        if (err instanceof Error && err.name === "AbortError") {
+          return; // Silently ignore fetch abort
         }
+        const errorMessage =
+          err instanceof Error ? err.message : "Failed to load specification document";
+        setError(errorMessage);
       })
       .finally(() => {
         if (isMounted) {
@@ -79,6 +84,7 @@ export function SpecPreviewModal({
 
     return () => {
       isMounted = false;
+      controller.abort();
     };
   }, [isOpen, specId, projectId]);
 
@@ -91,7 +97,8 @@ export function SpecPreviewModal({
   const formattedDate = specDate
     ? specDate
     : specDetail?.createdAt
-    ? new Date(specDetail.createdAt).toLocaleString([], {
+    ? new Date(specDetail.createdAt).toLocaleString("en-US", {
+        timeZone: "UTC",
         dateStyle: "medium",
         timeStyle: "short",
       })

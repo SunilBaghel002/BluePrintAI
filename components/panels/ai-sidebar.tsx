@@ -27,6 +27,7 @@ import {
   type AiChatMessage,
   AI_GENERATING_STATUSES,
 } from "@/types/tasks";
+import { specListItemSchema, type SpecListItemParsed } from "@/lib/validations/spec-params";
 
 interface AiSidebarProps {
   isOpen: boolean;
@@ -52,23 +53,32 @@ export function AiSidebar({ isOpen, onClose }: AiSidebarProps) {
   const [publicToken, setPublicToken] = React.useState<string | null>(null);
 
   // Specs tab state
-  const [specs, setSpecs] = React.useState<Array<{ id: string; projectId: string; filePath: string; createdAt: string }>>([]);
+  const [specs, setSpecs] = React.useState<SpecListItemParsed[]>([]);
   const [isSpecsLoading, setIsSpecsLoading] = React.useState(false);
   const [specsError, setSpecsError] = React.useState<string | null>(null);
   const [isGeneratingSpec, setIsGeneratingSpec] = React.useState(false);
   const [selectedSpecId, setSelectedSpecId] = React.useState<string | null>(null);
   const [isPreviewModalOpen, setIsPreviewModalOpen] = React.useState(false);
 
+  const roomId = room?.id;
+
   const fetchSpecs = React.useCallback(async () => {
-    if (!room?.id) return;
+    if (!roomId) return;
     try {
       setIsSpecsLoading(true);
       setSpecsError(null);
-      const res = await fetch(`/api/projects/${room.id}/specs`);
+      const res = await fetch(`/api/projects/${roomId}/specs`);
       if (!res.ok) throw new Error("Failed to fetch specs");
       const data = await res.json();
-      if (data.specs) {
-        setSpecs(data.specs);
+      if (Array.isArray(data.specs)) {
+        const validSpecs: SpecListItemParsed[] = [];
+        for (const item of data.specs) {
+          const parsed = specListItemSchema.safeParse(item);
+          if (parsed.success) {
+            validSpecs.push(parsed.data);
+          }
+        }
+        setSpecs(validSpecs);
       }
     } catch (err: unknown) {
       console.error("Specs list fetch error:", err);
@@ -76,7 +86,7 @@ export function AiSidebar({ isOpen, onClose }: AiSidebarProps) {
     } finally {
       setIsSpecsLoading(false);
     }
-  }, [room?.id]);
+  }, [roomId]);
 
   React.useEffect(() => {
     fetchSpecs();
@@ -503,7 +513,8 @@ export function AiSidebar({ isOpen, onClose }: AiSidebarProps) {
           ) : (
             <div className="space-y-2.5">
               {specs.map((spec, index) => {
-                const formattedDate = new Date(spec.createdAt).toLocaleDateString([], {
+                const formattedDate = new Date(spec.createdAt).toLocaleDateString("en-US", {
+                  timeZone: "UTC",
                   month: "short",
                   day: "numeric",
                   year: "numeric",
@@ -515,11 +526,21 @@ export function AiSidebar({ isOpen, onClose }: AiSidebarProps) {
                 return (
                   <div
                     key={spec.id}
+                    role="button"
+                    tabIndex={0}
+                    aria-label={`Preview ${specTitle}`}
                     onClick={() => {
                       setSelectedSpecId(spec.id);
                       setIsPreviewModalOpen(true);
                     }}
-                    className="group rounded-xl border border-surface-border bg-elevated hover:border-accent-primary/60 p-3 transition-all cursor-pointer space-y-2 hover:shadow-lg"
+                    onKeyDown={(e) => {
+                      if (e.key === "Enter" || e.key === " ") {
+                        if (e.key === " ") e.preventDefault();
+                        setSelectedSpecId(spec.id);
+                        setIsPreviewModalOpen(true);
+                      }
+                    }}
+                    className="group rounded-xl border border-surface-border bg-elevated hover:border-accent-primary/60 p-3 transition-all cursor-pointer space-y-2 hover:shadow-lg focus:outline-none focus:ring-1 focus:ring-accent-primary"
                   >
                     <div className="flex items-start justify-between">
                       <div className="flex items-center gap-2.5 min-w-0">
