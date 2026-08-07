@@ -2,6 +2,7 @@
 
 import * as React from "react";
 import {
+  Cpu,
   LayoutTemplate,
   PanelLeft,
   Share2,
@@ -42,19 +43,40 @@ export function EditorNavbar({
 }: EditorNavbarProps) {
   return (
     <header className="h-12 border-b border-[#1E1E24] bg-[#0E0E10] px-4 flex items-center justify-between shrink-0 z-40">
-      {/* Left Section: Sidebar Toggle & Title */}
+      {/* Left Section: Sidebar Toggle, Blueprint AI Brand Logo, & Project Breadcrumb */}
       <div className="flex items-center gap-3">
-        <Button
-          variant="ghost"
-          size="icon-xs"
-          onClick={onToggleSidebar}
-          aria-label={isSidebarOpen ? "Close sidebar" : "Open sidebar"}
-          className="h-8 w-8 rounded-lg border border-[#222226] bg-[#141418] text-[#888892] hover:text-white hover:bg-[#1E1E22] transition-colors"
-        >
-          <PanelLeft className="h-4 w-4 stroke-[1.5]" />
-        </Button>
-        <div className="flex flex-col">
-          <span className="text-xs font-semibold text-[#F0F0F0] leading-none">
+        {onToggleSidebar && (
+          <Button
+            variant="ghost"
+            size="icon-xs"
+            onClick={onToggleSidebar}
+            aria-label={isSidebarOpen ? "Close sidebar" : "Open sidebar"}
+            className="h-8 w-8 rounded-lg border border-[#222226] bg-[#141418] text-[#888892] hover:text-white hover:bg-[#1E1E22] transition-colors shrink-0"
+          >
+            <PanelLeft className="h-4 w-4 stroke-[1.5]" />
+          </Button>
+        )}
+
+        {/* Blueprint AI Brand Mark */}
+        <div className="flex items-center gap-2 select-none shrink-0">
+          <div className="flex h-7 w-7 items-center justify-center rounded-lg bg-[#2563EB] shadow-sm">
+            <Cpu className="h-4 w-4 text-white stroke-[1.5]" />
+          </div>
+          <div className="flex items-center gap-1.5">
+            <span className="text-xs font-bold tracking-tight text-[#F0F0F0]">
+              Blueprint
+            </span>
+            <span className="text-[10px] font-mono font-medium text-[#7C3AED] bg-[#2E1065] border border-[#7C3AED]/40 rounded px-1.5 py-0.5 leading-none">
+              AI
+            </span>
+          </div>
+        </div>
+
+        <span className="text-[#333338] text-xs font-mono select-none">/</span>
+
+        {/* Active Project Workspace Title */}
+        <div className="flex flex-col min-w-0">
+          <span className="text-xs font-semibold text-[#F0F0F0] leading-none truncate max-w-[180px] sm:max-w-[280px]">
             {projectName}
           </span>
           <span className="text-[10px] text-[#666670] leading-none mt-1">

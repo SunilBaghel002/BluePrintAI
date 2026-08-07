@@ -1,5 +1,5 @@
 import * as React from "react";
-import { Cpu, Loader2, LayoutGrid } from "lucide-react";
+import { Cpu, PanelLeft, Loader2, LayoutGrid } from "lucide-react";
 
 export default function EditorLoading() {
   return (
@@ -11,14 +11,15 @@ export default function EditorLoading() {
         color: "#F0F0F0",
         display: "flex",
         flexDirection: "column",
+        fontFamily: "var(--font-sans), system-ui, sans-serif",
       }}
     >
-      {/* Top Navbar Skeleton */}
+      {/* Top Navbar Skeleton matching EditorNavbar exactly */}
       <header
         style={{
           height: "48px",
-          backgroundColor: "#0D0D0D",
-          borderBottom: "1px solid #1A1A1A",
+          backgroundColor: "#0E0E10",
+          borderBottom: "1px solid #1E1E24",
           display: "flex",
           alignItems: "center",
           justifyContent: "space-between",
@@ -26,29 +27,74 @@ export default function EditorLoading() {
         }}
       >
         <div style={{ display: "flex", alignItems: "center", gap: "12px" }}>
+          {/* Sidebar Icon Placeholder */}
           <div
             style={{
-              width: "28px",
-              height: "28px",
-              borderRadius: "6px",
-              backgroundColor: "#2563EB",
+              width: "32px",
+              height: "32px",
+              borderRadius: "8px",
+              backgroundColor: "#141418",
+              border: "1px solid #222226",
               display: "flex",
               alignItems: "center",
               justifyContent: "center",
+              color: "#888892",
             }}
           >
-            <Cpu style={{ width: "16px", height: "16px", color: "#FFF" }} strokeWidth={1.5} />
+            <PanelLeft style={{ width: "16px", height: "16px" }} strokeWidth={1.5} />
           </div>
-          <span style={{ fontSize: "14px", fontWeight: 600, color: "#F0F0F0" }}>Blueprint</span>
+
+          {/* Blueprint AI Brand Identity */}
+          <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
+            <div
+              style={{
+                width: "28px",
+                height: "28px",
+                borderRadius: "6px",
+                backgroundColor: "#2563EB",
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "center",
+              }}
+            >
+              <Cpu style={{ width: "16px", height: "16px", color: "#FFF" }} strokeWidth={1.5} />
+            </div>
+            <div style={{ display: "flex", alignItems: "center", gap: "6px" }}>
+              <span style={{ fontSize: "12px", fontWeight: 700, color: "#F0F0F0" }}>Blueprint</span>
+              <span
+                style={{
+                  fontSize: "10px",
+                  fontFamily: "var(--font-mono), monospace",
+                  color: "#7C3AED",
+                  backgroundColor: "#2E1065",
+                  border: "1px solid rgba(124, 58, 237, 0.4)",
+                  borderRadius: "4px",
+                  padding: "1px 5px",
+                }}
+              >
+                AI
+              </span>
+            </div>
+          </div>
+
+          <span style={{ color: "#333338", fontSize: "12px", fontFamily: "monospace" }}>/</span>
+
+          {/* Workspace Title Placeholder */}
+          <div style={{ display: "flex", flexDirection: "column", gap: "4px" }}>
+            <span style={{ fontSize: "12px", fontWeight: 600, color: "#F0F0F0" }}>
+              Loading Workspace...
+            </span>
+            <span style={{ fontSize: "10px", color: "#666670" }}>Workspace</span>
+          </div>
         </div>
 
-        <div style={{ display: "flex", alignItems: "center", gap: "8px", color: "#A0A0A0" }}>
+        <div style={{ display: "flex", alignItems: "center", gap: "8px", color: "#888892" }}>
           <Loader2 className="animate-spin" style={{ width: "16px", height: "16px", color: "#2563EB" }} />
           <span style={{ fontSize: "12px" }}>Loading projects...</span>
         </div>
       </header>
 
-      {/* Main Content Area Skeleton */}
+      {/* Main Workspace Skeleton Placeholder */}
       <main
         style={{
           flex: 1,
@@ -64,30 +110,30 @@ export default function EditorLoading() {
             display: "flex",
             flexDirection: "column",
             alignItems: "center",
-            gap: "16px",
+            gap: "20px",
             textAlign: "center",
           }}
         >
           <div
             style={{
-              width: "48px",
-              height: "48px",
-              borderRadius: "12px",
-              backgroundColor: "#111111",
-              border: "1px solid #1A1A1A",
               display: "flex",
               alignItems: "center",
               justifyContent: "center",
+              width: "44px",
+              height: "44px",
+              borderRadius: "12px",
+              backgroundColor: "#141418",
+              border: "1px solid #222226",
               color: "#2563EB",
             }}
           >
-            <LayoutGrid style={{ width: "24px", height: "24px" }} strokeWidth={1.5} />
+            <LayoutGrid style={{ width: "22px", height: "22px" }} strokeWidth={1.5} />
           </div>
-          <div>
-            <h2 style={{ fontSize: "16px", fontWeight: 600, color: "#F0F0F0", margin: 0 }}>
+          <div style={{ display: "flex", flexDirection: "column", gap: "6px" }}>
+            <h2 style={{ fontSize: "15px", fontWeight: 600, color: "#F0F0F0", margin: 0 }}>
               Loading Editor Workspace
             </h2>
-            <p style={{ fontSize: "12px", color: "#A0A0A0", marginTop: "4px" }}>
+            <p style={{ fontSize: "12px", color: "#888892", margin: 0 }}>
               Fetching your projects and real-time collaboration canvas...
             </p>
           </div>
